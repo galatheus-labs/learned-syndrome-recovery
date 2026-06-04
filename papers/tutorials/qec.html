@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tutorial: Sizing a 3D Convolutional Surface-Code Decoder</title>
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      displayMath: [['$$', '$$'], ['\\[', '\\]']]
+    },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root {
+    --ink: #1b1f24;
+    --muted: #5a636e;
+    --accent: #2b5d8a;
+    --accent-soft: #eef4fa;
+    --warn-bg: #fff7ec;
+    --warn-bd: #e6b86a;
+    --good-bg: #eef7f0;
+    --good-bd: #79b389;
+    --gloss-bg: #f6f4fb;
+    --gloss-bd: #c2b6e0;
+    --line: #d8dee5;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: #fbfcfd;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0 18px 80px;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; }
+  header.title {
+    margin: 48px 0 8px;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 18px;
+  }
+  header.title h1 { font-size: 1.95rem; line-height: 1.25; margin: 0 0 10px; }
+  header.title .sub { color: var(--muted); font-size: 1.02rem; }
+  header.title .meta { color: var(--muted); font-size: 0.9rem; margin-top: 10px; }
+  h2 {
+    font-size: 1.45rem;
+    margin: 46px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    color: var(--accent);
+  }
+  h3 { font-size: 1.12rem; margin: 30px 0 8px; }
+  h4 { font-size: 1.0rem; margin: 22px 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  p { margin: 12px 0; }
+  a { color: var(--accent); }
+  code {
+    background: #eef1f4;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+  }
+  .aside, .callout, .good {
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 20px 0;
+    font-size: 0.97rem;
+  }
+  .aside { background: var(--accent-soft); border-left: 4px solid var(--accent); }
+  .callout { background: var(--warn-bg); border-left: 4px solid var(--warn-bd); }
+  .good { background: var(--good-bg); border-left: 4px solid var(--good-bd); }
+  .aside .lbl, .callout .lbl, .good .lbl {
+    font-weight: 700; font-size: 0.78rem; letter-spacing: 0.06em;
+    text-transform: uppercase; display: block; margin-bottom: 4px;
+  }
+  .aside .lbl { color: var(--accent); }
+  .callout .lbl { color: #b9772a; }
+  .good .lbl { color: #3f8156; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 22px 0;
+    font-size: 0.92rem;
+  }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: right; }
+  th { background: #eef1f4; font-weight: 600; }
+  td.l, th.l { text-align: left; }
+  caption { caption-side: bottom; color: var(--muted); font-size: 0.85rem; padding-top: 8px; text-align: left; }
+  .win { color: #2f7d4d; font-weight: 600; }
+  .loss { color: #b23a3a; font-weight: 600; }
+  .tie { color: #9a7d2a; font-weight: 600; }
+  dl.gloss { background: var(--gloss-bg); border: 1px solid var(--gloss-bd); border-radius: 8px; padding: 8px 22px; }
+  dl.gloss dt { font-weight: 700; margin-top: 14px; color: #4a3d72; }
+  dl.gloss dd { margin: 4px 0 0; color: var(--ink); }
+  ul, ol { padding-left: 24px; }
+  li { margin: 6px 0; }
+  .small { font-size: 0.86rem; color: var(--muted); }
+  hr.soft { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
+  .lead { font-size: 1.08rem; }
+  .tagline { font-style: italic; color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="title">
+  <h1>Sizing and Capacity Boundaries of a 3D Convolutional Surface-Code Decoder</h1>
+  <div class="sub">A guided tutorial and self-check for the paper
+    <em>&ldquo;Sizing and Capacity Boundaries of Spatial Convolutional Decoders for Surface-Code Quantum Error Correction&rdquo;</em></div>
+  <div class="meta">Written so a technically literate non-specialist can verify they understand every concept the paper relies on, and read its claims like a skeptical reviewer. All numbers below are taken directly from the paper&rsquo;s LaTeX source and its reproduction JSONs &mdash; nothing is invented.</div>
+</header>
+
+<!-- ============================================================ -->
+<h2>1. In one sentence &mdash; and why it matters</h2>
+
+<p class="lead"><strong>In one sentence:</strong> The paper takes a single,
+deliberately simple kind of neural network &mdash; a 3D convolutional net that
+looks at the surface code&rsquo;s error-detection events as a little 3D image
+&mdash; and carefully measures <em>how big the network has to be at each code
+size, and exactly where the simple approach stops working.</em></p>
+
+<p>It is explicitly <strong>not</strong> trying to set a new accuracy record,
+and it explicitly does <strong>not</strong> claim a clean &ldquo;scaling
+law.&rdquo; It is a <em>sizing-and-boundary study</em>: a map of which problem
+sizes the simple decoder wins, ties, or loses, and how much network you need
+to spend to get there.</p>
+
+<div class="aside">
+  <span class="lbl">Why it matters</span>
+  Quantum computers make errors constantly. To run a useful computation you
+  must <em>decode</em> a stream of error-detection signals in real time and
+  figure out what correction to apply. The community already knows that neural
+  decoders <em>can</em> beat the standard classical decoder (minimum-weight
+  perfect matching, MWPM). What nobody had pinned down is the boring-but-load-bearing
+  engineering question: <strong>how much network do you need as the code gets
+  bigger, and does the network&rsquo;s internal design matter once you&rsquo;ve
+  sized it right?</strong> Prior neural decoders pick their model sizes ad hoc.
+  This paper measures the requirement, with full multi-seed rigor, and reports
+  the honest place where the pure-convolutional idea runs out of room.
+</div>
+
+<!-- ============================================================ -->
+<h2>2. Background you need (from first principles)</h2>
+
+<p>Everything below is defined from scratch. If you already know quantum error
+correction you can skip to Section 3, but the short version of each idea is
+here so the results section reads cleanly.</p>
+
+<h3>2.1 Qubits, errors, and why we cannot just copy</h3>
+<p>A classical bit is 0 or 1. A <strong>qubit</strong> is a quantum two-level
+system; its state can be a superposition. Two facts make protecting qubits
+hard: (1) you cannot copy an unknown quantum state (no cloning), so the classic
+&ldquo;store three copies and take a majority vote&rdquo; trick is illegal; and
+(2) <em>measuring</em> a qubit collapses it, so you cannot just look at the data
+to check for errors. Quantum error correction (QEC) is the set of tricks that
+get around both problems.</p>
+
+<h3>2.2 Stabilizer codes and the surface code</h3>
+<p>A <strong>stabilizer code</strong> spreads one piece of logical quantum
+information across many physical qubits, and protects it with a set of carefully
+chosen parity-style checks called <strong>stabilizers</strong>. The key idea: a
+stabilizer is an operator you can <em>measure without disturbing the encoded
+information</em>. Its measurement returns +1 if &ldquo;no error detected here&rdquo;
+and &minus;1 if &ldquo;something is wrong nearby,&rdquo; and crucially the
+measurement never reveals the logical data itself.</p>
+
+<p>The <strong>rotated surface code</strong> is the workhorse stabilizer code,
+because it only needs local, nearest-neighbour operations &mdash; ideal for real
+chips. At <strong>code distance</strong> $d$ it lays out $d^2$ data qubits on a
+2D grid with $d^2-1$ stabilizers arranged like a checkerboard. Each stabilizer
+in the bulk touches 4 adjacent data qubits (weight-4); at the edges it touches 2
+(weight-2). The code encodes exactly <strong>one logical qubit</strong>.</p>
+
+<div class="aside">
+  <span class="lbl">Intuition: code distance</span>
+  The <strong>distance</strong> $d$ is the minimum number of physical errors
+  needed to corrupt the logical qubit without tripping any alarm. Bigger $d$ =
+  more redundancy = better protection. Below a critical physical error rate
+  (the <em>threshold</em>), the logical error rate <em>shrinks exponentially</em>
+  as you raise $d$. That is the entire reason to build bigger codes &mdash; and
+  the reason a decoder has to keep working as $d$ grows.
+</div>
+
+<p>One more useful fact the paper leans on: $X$-type errors flip $Z$-type
+stabilizers and vice-versa, so the two error types decode independently under
+the simple noise models used here. You can think of the decoder as solving one
+of these two mirror-image problems.</p>
+
+<h3>2.3 Detectors and detector events (the decoder&rsquo;s input)</h3>
+<p>In a real experiment you do not measure the stabilizers once; you measure them
+<em>round after round</em> while the computation runs. A <strong>detector</strong>
+is the parity (XOR) of two consecutive measurements of the same stabilizer. In a
+perfect world consecutive measurements agree, so the detector is 0. If an error
+occurred between the two rounds, the detector fires (= 1). A fired detector is a
+<strong>detector event</strong>.</p>
+
+<p>For distance $d$ run for $d$ measurement rounds, there are roughly
+$d \times (d^2-1)$ detectors &mdash; this grows like $d^3$, a number that will
+matter a lot. After all the rounds, one extra bit per shot, the
+<strong>observable flip</strong>, records whether the logical qubit ended up
+flipped relative to where it started. <em>That single bit is what the decoder is
+ultimately trying to predict.</em></p>
+
+<div class="aside">
+  <span class="lbl">Mental model</span>
+  Picture a $d\times d$ checkerboard of alarm sensors, photographed once per
+  round for $d$ rounds. Stack the photos into a 3D block: two spatial axes plus
+  one time axis. A &ldquo;1&rdquo; voxel means &ldquo;this sensor flipped at this
+  moment.&rdquo; A physical error shows up as a small, local cluster of lit
+  voxels. <strong>Decoding = looking at the lit voxels and guessing whether the
+  net effect flipped the logical bit.</strong>
+</div>
+
+<h3>2.4 Cosets: why predicting one bit is legitimate</h3>
+<p>Many different physical error patterns produce the <em>exact same</em>
+detector events and the <em>exact same</em> logical outcome &mdash; they differ
+only by a stabilizer, which by definition does nothing observable. The set of
+errors equivalent in this way is a <strong>coset</strong>. A decoder does not
+need to name the exact error; it only needs the coset, i.e. the final logical
+effect. Because this paper&rsquo;s decoder predicts the single observable-flip bit
+directly, stabilizer-equivalent errors automatically get identical labels. The
+decoder is <em>invariant to coset choice for free</em>, with no special data
+augmentation. (AlphaQubit relies on the same property.)</p>
+
+<h3>2.5 The decoder, and the MWPM baseline</h3>
+<p>A <strong>decoder</strong> takes the detector events and outputs the
+correction (here: the predicted logical flip). The standard classical baseline is
+<strong>Minimum-Weight Perfect Matching (MWPM)</strong>, used here via
+<strong>PyMatching v2</strong>. MWPM models the problem as a graph: detector
+events are vertices, and the decoder pairs them up so that the total &ldquo;cost&rdquo;
+of the connecting paths is minimized &mdash; the most likely set of errors that
+explains the alarms. It is fast, principled, and the universal yardstick in QEC.</p>
+
+<p>The number to beat is the <strong>logical error rate (LER)</strong>: the
+fraction of shots where the decoder gets the logical bit wrong. Lower is better.
+A &ldquo;+16%&rdquo; improvement in this paper means the neural decoder&rsquo;s
+LER is 16% lower than MWPM&rsquo;s on the same shots.</p>
+
+<h3>2.6 The unifying framing: &ldquo;the decoder is the Hamiltonian&rdquo;</h3>
+<p>The paper opens with a conceptual lens that is worth understanding because it
+explains why the authors think this whole family of problems is one problem. Any
+probability distribution can be written as a Boltzmann distribution:</p>
+<p>$$ p(x) \;\propto\; \exp\!\big(-H(x)\big), $$</p>
+<p>where $H$ is an &ldquo;energy.&rdquo; Reconstructing a signal from corrupted
+observations = finding the low-energy (high-probability) state of some $H$. Under
+this lens:</p>
+<ul>
+  <li><strong>MWPM</strong> uses a fixed, hand-designed $H$ (read off the code&rsquo;s
+      graph) and finds its ground state by matching.</li>
+  <li>A <strong>diffusion model</strong> learns the score $\nabla \log p = -\nabla H$
+      and descends it.</li>
+  <li>A <strong>neural decoder</strong> (this paper) amortizes
+      $\arg\min_x H(x \mid \text{syndrome})$ into one forward pass.</li>
+  <li><strong>Autonomous QEC hardware</strong> bakes $H$ into the physics so
+      dissipation does the descent &mdash; no classical decoder at all.</li>
+</ul>
+<p>They differ only in <em>where</em> $H$ lives and <em>how</em> you evaluate it.
+This is framing, not a result &mdash; but it is why the authors care about
+&ldquo;how much capacity the learned $H$ needs.&rdquo;</p>
+
+<h3>2.7 What a 3D convolution and a ResNet block are</h3>
+<p>A <strong>convolution</strong> slides a small learnable filter over the input
+and computes local weighted sums; in 3D the filter is a little cube that sweeps
+the $(x,y,t)$ volume. This is exactly the right tool here because errors create
+<em>local</em> voxel clusters. A <strong>ResNet block</strong> is a pair of
+conv layers wrapped in a <em>residual skip connection</em>: the block computes
+$y = x + f(x)$ instead of $y = f(x)$, which makes deep networks trainable.
+<strong>Width</strong> $W$ = number of feature channels; <strong>depth</strong>
+$N$ = number of residual blocks. The product $W\times N$ is the paper&rsquo;s
+proxy for capacity.</p>
+
+<dl class="gloss" style="margin-top:8px">
+  <dt>GroupNorm + SiLU</dt>
+  <dd>Standard stabilizing ingredients: GroupNorm normalizes activations within
+  channel groups; SiLU ($x\cdot\text{sigmoid}(x)$) is a smooth activation.</dd>
+  <dt>FiLM conditioning</dt>
+  <dd>&ldquo;Feature-wise Linear Modulation&rdquo;: a side input (here, the noise
+  rate $p$) is turned into per-channel scale/shift factors applied inside the
+  block, letting one model behave differently at different noise rates.</dd>
+  <dt>Squeeze-Excite (SE)</dt>
+  <dd>A lightweight attention-like gate that reweights channels based on a global
+  summary of the feature map.</dd>
+  <dt>ReZero</dt>
+  <dd>A learnable scalar in front of the residual branch, initialized to 0, so a
+  fresh deep network starts as the identity and trains more stably.</dd>
+</dl>
+
+<!-- ============================================================ -->
+<h2>3. What the paper actually does</h2>
+
+<h3>3.1 The core idea: detector events as a 3D image</h3>
+<p>Stim (the simulator) gives each detector a coordinate $(x,y,t)$. The authors
+discretize these to integer grid indices and build, for each shot, a sparse
+binary volume</p>
+<p>$$ V \in \{0,1\}^{D_x \times D_y \times D_t}, \qquad V[i,j,k]=1 \iff \text{detector }(i,j,k)\text{ fired}. $$</p>
+<p>For distance $d$ with $d$ rounds this is a $(d{+}1)\times(d{+}1)\times(d{+}1)$
+grid with checkerboard (sparse) occupancy. A 3D ResNet then maps this volume to a
+single logit predicting the observable flip:</p>
+<ol>
+  <li><strong>Input conv</strong> lifts the 1-channel binary volume to width $W$.</li>
+  <li><strong>$N$ residual blocks</strong> (Conv3d &times;2, GroupNorm, SiLU, skip).</li>
+  <li><strong>Error-rate conditioning</strong>: a small MLP turns the scalar $p$
+      into a vector added into each block&rsquo;s features &mdash; exactly like
+      the timestep embedding in diffusion models.</li>
+  <li><strong>Global average pool</strong> over space, then an <strong>MLP head</strong>
+      &rarr; one logit (logical flip yes/no).</li>
+</ol>
+
+<h3>3.2 One model, many noise rates (mixed-rate training)</h3>
+<p>Instead of training a separate model per physical error rate, they train a
+single model on a <em>uniform mixture</em> of rates $p \in \{0.001, 0.002, \ldots, 0.007\}$,
+feeding each sample its true $p$ as conditioning. One learned $H$ then serves a
+continuous range of operating points. Training: AdamW, LR $10^{-3}$, cosine
+annealing over 30 epochs, BCE loss, batch 2,048, 200K samples per rate &times; 7
+rates = 1.4M total, generated by Stim under circuit-level depolarizing noise.</p>
+
+<h3>3.3 The two block designs being compared</h3>
+<ul>
+  <li><strong>Classic</strong>: the standard ResNet block (conv &rarr; norm &rarr;
+  SiLU &rarr; condition &rarr; conv &rarr; norm &rarr; SiLU &rarr; skip).</li>
+  <li><strong>LC0</strong>: a Leela-Chess-Zero-style block bundling four changes
+  &mdash; pre-activation, dual-output squeeze-excite, FiLM conditioning, and a
+  ReZero scalar. The paper treats &ldquo;does block design matter?&rdquo; as a
+  real question, not a footnote.</li>
+</ul>
+
+<h3>3.4 The sizing rule: find the &ldquo;knee&rdquo; per distance</h3>
+<p>The detector volume grows like $d^3$, so the authors expect capacity must
+grow with $d$. To pick a size without cheating, they run a <strong>capacity scan</strong>:
+a small grid of $(\text{width}\times\text{depth})$ cells at each distance, trained
+short. The <strong>knee</strong> is the smallest cell whose validation LER is
+within a predeclared tolerance of the best cell. The selection rule &mdash;
+<em>minimize mean validation LER across eval rates, equally weighted</em> &mdash;
+is fixed <strong>before</strong> any test-set evaluation. The chosen knees:</p>
+
+<table>
+  <caption>Table&nbsp;1 (paper Tab.&nbsp;1). Selected per-distance knee cells, width&times;depth.</caption>
+  <thead><tr><th class="l">Block</th><th>$d{=}3$</th><th>$d{=}5$</th><th>$d{=}7$</th><th>$d{=}9$</th><th>$d{=}11$</th></tr></thead>
+  <tbody>
+    <tr><td class="l">Classic</td><td>16&times;4</td><td>64&times;8</td><td>64&times;8</td><td>96&times;12</td><td>96&times;12</td></tr>
+    <tr><td class="l">LC0</td><td>16&times;4</td><td>64&times;8</td><td>96&times;12</td><td>128&times;12</td><td>96&times;12</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <span class="lbl">Crucial honesty point</span>
+  The paper deliberately refuses to fit a closed-form law like
+  $W\cdot\text{depth} \approx \alpha\, d^3$. The $d^3$ volume <em>motivates</em>
+  why capacity should grow, but the multi-seed data show a <strong>boundary</strong>
+  &mdash; a regime where seed variance explodes and the decoder falls below MWPM
+  &mdash; not a clean power law. So they report an empirical operating map and a
+  boundary location, and call a first-principles capacity bound an open problem.
+</div>
+
+<h3>3.5 The rigor scaffolding (why you can trust the numbers)</h3>
+<ul>
+  <li><strong>Three seeds</strong> (42/43/44) for every reported cell.</li>
+  <li><strong>Disjoint test split</strong>: a sampler seed of $\text{seed}\times1000+800$,
+  disjoint from train and validation seeds. No val numbers in the paper.</li>
+  <li><strong>Paired MWPM</strong> on the <em>same</em> test shots, with
+  <strong>McNemar&rsquo;s test</strong> for significance.</li>
+  <li><strong>95% confidence intervals</strong> on every rate.</li>
+  <li><strong>One script</strong>: <code>reproduce_qec_results.py</code> emits
+  every number and fails by construction on incomplete seed coverage.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2>4. The results, explained</h2>
+
+<h3>4.1 The headline operating map (at $p=0.003$)</h3>
+<p>This is the paper&rsquo;s central table. &ldquo;Improv.&rdquo; is positive
+when the neural decoder beats MWPM. (It is the seed-mean of per-seed relative
+improvements, which at the high-variance $d=9,11$ rows differs from the ratio of
+the mean LERs &mdash; that is why, e.g., the $d=9$ classic improvement reads
+$-5.6\%$ even though the mean LER is only slightly above MWPM.)</p>
+
+<table>
+  <caption>Table&nbsp;2 (paper Tab.&nbsp;2). Three-seed mean test LER vs. paired MWPM at $p=0.003$. Verified against <code>qec_clean_knee_multiseed.json</code>.</caption>
+  <thead>
+    <tr><th>$d$</th><th>MWPM LER</th><th>Classic LER</th><th>Classic improv.</th><th>LC0 LER</th><th>LC0 improv.</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>3</td><td class="num">0.006587</td><td class="num">0.005681</td><td class="win">+13.7%</td><td class="num">0.005657</td><td class="win">+14.1%</td></tr>
+    <tr><td>5</td><td class="num">0.003290</td><td class="num">0.002734</td><td class="win">+16.9%</td><td class="num">0.002667</td><td class="win">+18.9%</td></tr>
+    <tr><td>7</td><td class="num">0.001396</td><td class="num">0.001237</td><td class="win">+11.4%</td><td class="num">0.001037</td><td class="win">+25.6%</td></tr>
+    <tr><td>9</td><td class="num">0.000557</td><td class="num">0.000588</td><td class="tie">&minus;5.6%</td><td class="num">0.000827</td><td class="loss">&minus;49.3%</td></tr>
+    <tr><td>11</td><td class="num">0.000203</td><td class="num">0.001049</td><td class="loss">&minus;453%</td><td class="num">0.002455</td><td class="loss">&minus;1192%</td></tr>
+  </tbody>
+</table>
+
+<p>Read it as three regimes:</p>
+<ul>
+  <li><strong>Win ($d=3,5,7$):</strong> the pure-spatial decoder beats MWPM by
+  +11% to +26%. McNemar favors the neural decoder here.</li>
+  <li><strong>Boundary ($d=9$):</strong> a <em>statistical tie</em> at the
+  selected knee. The seed-level 95% CI on the classic LER, $[0.00045, 0.00072]$,
+  straddles MWPM&rsquo;s $0.000557$. The per-seed classic LERs are
+  $\{0.00059, 0.00045, 0.00072\}$ &mdash; one seed beats MWPM, two do not. LC0 is
+  worse here, with a $2$&ndash;$3\times$ outlier seed.</li>
+  <li><strong>Failure / under-capacity ($d=11$):</strong> at the chosen
+  $96\times12$ knee the decoder is roughly $5\times$ worse than MWPM (classic),
+  and far worse for LC0. The paper explicitly says this knee is
+  <em>under-capacity</em>, not a tuned best case.</li>
+</ul>
+
+<div class="aside">
+  <span class="lbl">Why &ldquo;boundary,&rdquo; not &ldquo;trend&rdquo;</span>
+  The tell-tale sign is variance, not just the mean. At $d\le7$ the seeds agree
+  tightly; at $d=9,11$ the standard error of the mean (SEM) is an
+  <strong>order of magnitude larger</strong>, and individual seeds disagree on
+  whether MWPM is beaten. A clean power law would not look like that. This is the
+  honest reason the paper refuses to fit $\alpha\, d^3$.
+</div>
+
+<h3>4.2 The $d=9$ &ldquo;boundary&rdquo; is under-resourcing, not a wall</h3>
+<p>This is the most important nuance, and it is well-supported. A follow-up
+probe (k8s tag <code>qec-bnd-may30</code>) re-ran $d=9$ with the
+<em>same architecture</em> (classic, $w{=}96$, depth $12$) but
+<strong>5&times; the training data</strong>, on the same disjoint test split over
+three seeds. It beats MWPM at every rate (numbers from
+<code>data/d9_dataarm_reproduction.json</code>):</p>
+
+<table>
+  <caption>Table&nbsp;3 (paper §4.2 follow-up). $d=9$ 5&times;-data probe, 3 seeds, disjoint test split. Verified against <code>d9_dataarm_reproduction.json</code>.</caption>
+  <thead>
+    <tr><th>$p$</th><th>Neural LER</th><th>MWPM LER</th><th>Improv.</th><th>per-seed McNemar $p$</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="num">0.001</td><td class="num">0.000001</td><td class="num">0.000003</td><td class="win">+75%</td><td class="small">n.s. (too few events)</td></tr>
+    <tr><td class="num">0.003</td><td class="num">0.000232</td><td class="num">0.000537</td><td class="win">+56.5%</td><td class="num">~1e&minus;7 &hellip; 1e&minus;11</td></tr>
+    <tr><td class="num">0.005</td><td class="num">0.00346</td><td class="num">0.006785</td><td class="win">+49%</td><td class="num">~0</td></tr>
+    <tr><td class="num">0.007</td><td class="num">0.0201</td><td class="num">0.0312</td><td class="win">+36%</td><td class="num">~0</td></tr>
+  </tbody>
+</table>
+
+<div class="good">
+  <span class="lbl">What this resolves</span>
+  Same network, more data, decisive win with tight cross-seed agreement. So the
+  $d=9$ tie in Table&nbsp;2 was an <strong>under-training / under-data artifact of
+  the selected knee</strong>, not a fundamental capacity wall. The paper is
+  careful to attach this only to $d=9$ &mdash; it does <em>not</em> claim the same
+  for $d=11$, which stays under-capacity at the budget run.
+</div>
+
+<h3>4.3 Block design is distance-dependent (the surprising bit)</h3>
+<p>The authors had hypothesized that, once you size capacity correctly, the block
+design would be second-order. The data refute the strong form of that:</p>
+<ul>
+  <li>$d=3,5$: LC0 and classic are indistinguishable (+0.4%, +2.4% over classic).</li>
+  <li>$d=7$: LC0 is a <strong>clear win</strong> &mdash; +16.1% over the classic
+  block, i.e. +25.6% vs MWPM against the classic block&rsquo;s +11.4%.</li>
+  <li>$d=9, 11$: LC0 does <strong>not</strong> help &mdash; it is actually worse.</li>
+</ul>
+<p>So block design matters, and matters most at <em>intermediate</em> distance.
+It extends the useful regime at $d=7$ but offers no rescue at the boundary.</p>
+
+<h3>4.4 Full per-rate picture and inference cost</h3>
+<p>The qualitative story is rate-stable across $p\in\{0.001,0.003,0.005,0.007\}$:
+the win at $d\le7$, the $d=9$ boundary, and the $d=11$ collapse all persist, and
+the SEM at $d=9,11$ is an order of magnitude larger than at $d\le7$ &mdash;
+quantifying the instability. On cost, the 3D-conv decoder is $O(d^3)$ per shot,
+matching MWPM and Mamba and <strong>strictly better than AlphaQubit by a factor
+of $d$</strong> (AlphaQubit&rsquo;s attention is $O(d^4)$). Measured latency on an
+RTX 4070 Ti scales as $\sim d^{2.9}$. Honest caveat: the prototype is still
+roughly two orders of magnitude too slow for real-time hardware (~180&times;
+slower than the cycle time at $d=5$); the authors only <em>project</em> a path
+via TensorRT/quantization/FPGA, they do not demonstrate it.</p>
+
+<!-- ============================================================ -->
+<h2>5. How to read it like a skeptical reviewer</h2>
+
+<h3>5.1 The exact claims, and what would falsify each</h3>
+<ul>
+  <li><strong>&ldquo;Beats MWPM at $d=3,5,7$.&rdquo;</strong> Falsifiable by:
+  a paired McNemar test that fails to favor the neural decoder, or improvements
+  that vanish across seeds. <em>Check:</em> all three seeds present, paired same
+  shots, McNemar favors neural. This row is the strongest.</li>
+  <li><strong>&ldquo;$d=9$ tie is under-resourcing, not fundamental.&rdquo;</strong>
+  Falsifiable by: the 5&times;-data probe failing to beat MWPM, or doing so on
+  only one seed. <em>Check:</em> +36% to +56.5% across three seeds with McNemar
+  $p$ down to $10^{-11}$ at $p=0.003$. Well-supported &mdash; though note this is
+  &ldquo;more data fixes it,&rdquo; not &ldquo;more capacity,&rdquo; since
+  width/depth were held fixed.</li>
+  <li><strong>&ldquo;$d=11$ is under-capacity.&rdquo;</strong> This is stated as a
+  limitation, not a win &mdash; the paper makes <em>no</em> MWPM-match claim at
+  $d=11$. Falsifying it isn&rsquo;t the point; the honest framing is the point.</li>
+  <li><strong>&ldquo;Block design is distance-dependent.&rdquo;</strong> The
+  weakest-supported claim, by the authors&rsquo; own admission &mdash; see below.</li>
+</ul>
+
+<h3>5.2 Baselines &mdash; is the comparison fair?</h3>
+<p>MWPM is decoded on the <em>same</em> test shots as the neural decoder, which
+is exactly right and enables paired McNemar tests. The disjoint test split (seed
+&times;1000+800) is genuinely separated from train/val. Good marks here.</p>
+
+<h3>5.3 The limitations the paper states about itself</h3>
+<div class="callout">
+  <span class="lbl">Read these before believing anything</span>
+  <ul style="margin:6px 0 0">
+    <li><strong>Simulation only.</strong> All syndromes are Stim circuit-level
+    depolarizing noise. No real hardware, no biased noise, leakage, or crosstalk
+    &mdash; precisely the regimes where MWPM&rsquo;s assumptions break and neural
+    decoders usually win biggest. So the win margins here may be conservative,
+    but they are also unvalidated on the hard cases.</li>
+    <li><strong>LC0-vs-classic is unpaired.</strong> The two blocks were trained
+    on <em>different</em> shots, so the +16% at $d=7$ is an aggregate mean
+    comparison, not a paired same-shot McNemar. A paired test
+    (<code>eval_paired_comparison.py</code>) is explicitly future work. Treat the
+    block-design finding as suggestive, not nailed.</li>
+    <li><strong>LC0 is not ablated.</strong> The $d=7$ win bundles four changes
+    (pre-activation, dual-output SE, FiLM, ReZero). Which one carries the win is
+    unknown &mdash; a component ablation is future work. &ldquo;The whole thing
+    works&rdquo; is, by the project&rsquo;s own rigor rules, insufficient on its own.</li>
+    <li><strong>$d=9,11$ have large seed variance</strong> (SEM 10&times; the
+    smaller distances); the boundary is reported as a boundary, and $d=11$ is
+    explicitly under-capacity rather than tuned.</li>
+    <li><strong>Not real-time</strong>; the acceleration path is projected, not
+    built.</li>
+  </ul>
+</div>
+
+<h3>5.4 What is genuinely <em>not</em> surprising, and what is</h3>
+<p><strong>Not surprising:</strong> that a neural decoder beats MWPM at small
+distances &mdash; prior work (AlphaQubit, Lange et al.&rsquo;s GNN, Mamba, NMWPM)
+already established this, often by <em>larger</em> margins. The paper says so
+plainly and does not claim SOTA. <strong>Genuinely informative:</strong> (1) the
+explicit per-distance sizing map and boundary location for a pure-spatial decoder
+&mdash; the gap left open by Gicev et al., who use one fixed-size
+translation-invariant model across distance; and (2) that block design is
+<em>not</em> second-order, contradicting the authors&rsquo; own prior hypothesis.
+A result that overturns your own expectation is the kind worth reporting.</p>
+
+<h3>5.5 The questions to push on in review</h3>
+<ol>
+  <li>Is the $d=9$ fix really &ldquo;under-resourcing&rdquo; if the resource you
+  added was <em>data</em>, not network capacity? The paper&rsquo;s own headline
+  framing is &ldquo;sizing,&rdquo; so be precise: this is an
+  under-<em>training</em>/under-<em>data</em> artifact at fixed width&times;depth.
+  (The paper does say exactly this.)</li>
+  <li>Could $d=11$ also be rescued by 5&times; data? The paper doesn&rsquo;t test
+  it and doesn&rsquo;t claim it &mdash; an obvious next experiment, and a fair
+  thing to ask for.</li>
+  <li>Without the paired LC0-vs-classic test and the component ablation, how much
+  weight should the &ldquo;distance-dependent block design&rdquo; claim carry?</li>
+</ol>
+
+<!-- ============================================================ -->
+<h2>6. Glossary</h2>
+<dl class="gloss">
+  <dt>Qubit</dt><dd>A quantum bit; cannot be copied or freely inspected without disturbance.</dd>
+  <dt>Stabilizer code</dt><dd>An encoding that protects logical information with parity-like checks (stabilizers) measured without revealing the data.</dd>
+  <dt>Stabilizer</dt><dd>An operator whose measurement returns &plusmn;1 and signals nearby errors; weight-4 in the surface-code bulk, weight-2 at boundaries.</dd>
+  <dt>Rotated surface code</dt><dd>The standard local 2D stabilizer code; at distance $d$ uses $d^2$ data qubits, $d^2-1$ stabilizers, encodes one logical qubit.</dd>
+  <dt>Code distance $d$</dt><dd>Minimum number of physical errors that can cause an undetected logical error. Larger $d$ &rarr; exponentially better protection below threshold.</dd>
+  <dt>Logical qubit / logical error</dt><dd>The protected information; a logical error is a corruption of it that survives correction.</dd>
+  <dt>Detector</dt><dd>The XOR of two consecutive measurements of the same stabilizer; should be 0 if no error occurred between them.</dd>
+  <dt>Detector event</dt><dd>A detector that fired (=1). The decoder&rsquo;s input is the pattern of these over space and time.</dd>
+  <dt>Observable flip</dt><dd>The single bit per shot recording whether the logical qubit ended up flipped. The prediction target.</dd>
+  <dt>Coset</dt><dd>A set of error patterns that differ only by a stabilizer, hence have identical syndrome and identical logical effect.</dd>
+  <dt>Decoder</dt><dd>Algorithm mapping detector events to a correction (here: a predicted logical flip).</dd>
+  <dt>MWPM</dt><dd>Minimum-Weight Perfect Matching; the classical baseline decoder (via PyMatching v2) that pairs detector events at minimum total cost.</dd>
+  <dt>LER</dt><dd>Logical Error Rate; fraction of shots the decoder gets wrong. The metric to minimize.</dd>
+  <dt>Threshold</dt><dd>The physical error rate below which increasing $d$ suppresses logical errors; the regime of interest here ($p\le 0.007$).</dd>
+  <dt>Circuit-level depolarizing noise</dt><dd>A realistic-ish simulated noise model with errors after each gate, on resets, and on measurements, all at rate $p$. Generated by Stim.</dd>
+  <dt>Stim</dt><dd>Fast stabilizer-circuit simulator used to generate all syndromes here.</dd>
+  <dt>3D convolution</dt><dd>A learnable local filter swept over the $(x,y,t)$ detector volume.</dd>
+  <dt>ResNet block</dt><dd>Two conv layers with a residual skip ($y=x+f(x)$); width = channels, depth = number of blocks.</dd>
+  <dt>Classic vs LC0 block</dt><dd>Classic = standard ResNet block. LC0 = pre-activation + dual-output squeeze-excite + FiLM conditioning + ReZero, bundled.</dd>
+  <dt>FiLM</dt><dd>Feature-wise Linear Modulation; conditions features on a side input (the noise rate $p$).</dd>
+  <dt>Capacity knee</dt><dd>The smallest width&times;depth cell within a predeclared tolerance of the best validation LER; the chosen per-distance size.</dd>
+  <dt>McNemar&rsquo;s test</dt><dd>Paired significance test for two binary classifiers on the same items (here, same test shots).</dd>
+  <dt>SEM / 95% CI</dt><dd>Standard error of the mean / 95% confidence interval; the paper reports both, and uses SEM blow-up at $d=9,11$ to diagnose the boundary.</dd>
+  <dt>Hamiltonian framing</dt><dd>Viewing every decoder as evaluating or descending the energy $H$ of $p(x)\propto e^{-H(x)}$; a conceptual lens, not a result.</dd>
+</dl>
+
+<!-- ============================================================ -->
+<h2>7. Key takeaways</h2>
+<ol>
+  <li><strong>This is a sizing-and-boundary study, not a record attempt.</strong>
+  The contribution is a per-distance capacity map for a <em>pure spatial</em> 3D
+  conv decoder, plus an honest boundary location &mdash; the gap prior work left open.</li>
+  <li><strong>Win / tie / fail map:</strong> beats MWPM at $d=3,5,7$ (+11% to
+  +26% at $p=0.003$); statistically tied at $d=9$ at the selected knee;
+  under-capacity at $d=11$.</li>
+  <li><strong>The $d=9$ tie is fixable.</strong> Same network + 5&times; data
+  beats MWPM by +36% to +56.5% across three seeds, with McNemar $p$ to $10^{-11}$
+  &mdash; so that boundary is an under-data artifact of the knee, not a wall.</li>
+  <li><strong>Block design is distance-dependent.</strong> LC0 is neutral at
+  $d=3,5$, a clear +16% win at $d=7$, and no help (worse) at $d=9,11$. This
+  overturns the authors&rsquo; own &ldquo;block design is second-order&rdquo; hypothesis.</li>
+  <li><strong>The honesty is the strength.</strong> Three seeds, disjoint test
+  split, paired McNemar, predeclared knee selection, single reproduction script,
+  and a frank limitations list (simulation only, unpaired block comparison,
+  un-ablated LC0, under-capacity $d=11$, not real-time). Read those before
+  citing any single number.</li>
+</ol>
+
+<hr class="soft">
+<p class="small">All quantitative claims above were transcribed directly from
+<code>main.tex</code> and cross-checked against
+<code>data/qec_clean_knee_multiseed.json</code> and
+<code>data/d9_dataarm_reproduction.json</code> in the paper directory. Per the
+project&rsquo;s reproducibility policy, every paper number is emitted by
+<code>reproduce_qec_results.py</code> over seeds 42/43/44.</p>
+
+</div>
+</body>
+</html>

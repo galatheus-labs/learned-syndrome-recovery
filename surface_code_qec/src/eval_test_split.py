@@ -19,11 +19,11 @@ Usage:
     # Evaluate a single run from local checkpoints:
     python eval_test_split.py --ckpt-dir ckpts/qec_d5 --distance 5 --seed 42
 
-    # Evaluate a run from /work on the cluster:
+    # Evaluate a run from an external checkpoint directory on the cluster:
     bin/gpurun --repo briangu/galareon -- bash -c '
       pip install -q stim pymatching
       cd parity_diffusion
-      python eval_test_split.py --ckpt-dir /work/qec_runs/d5_s42_w128_dep12/ckpts --distance 5 --seed 42
+      python eval_test_split.py --ckpt-dir /path/to/qec_runs/d5_s42_w128_dep12/ckpts --distance 5 --seed 42
     '
 
     # Higher shots at p=0.001:

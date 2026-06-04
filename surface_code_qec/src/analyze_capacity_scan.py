@@ -1,7 +1,7 @@
 """Analyze a capacity-scan sweep: find the knee of val LER vs model params
 at each surface-code distance, fit a power-law scaling rule.
 
-Reads run_meta.json + epochs.log from every /work/qec_runs/ directory whose
+Reads run_meta.json + epochs.log from every local run directory whose
 meta has the matching --tag, and extracts best val LER (mean across eval
 rates) per cell. Groups by distance, prints a table, fits alpha in the
 relation w*depth = alpha * d^3.
@@ -10,8 +10,8 @@ Usage:
     # Analyze a scan (default tag matches bin/qec_capacity_scan):
     python analyze_capacity_scan.py --tag capacity-scan-apr17
 
-    # Scan a local directory instead of /work:
-    python analyze_capacity_scan.py --runs-dir ./qec_runs --tag capacity-scan-apr17
+    # Scan a specific local directory:
+    python analyze_capacity_scan.py --runs-dir ./runs/qec_runs --tag capacity-scan-apr17
 
     # Emit a knee-based sizing recommendation:
     python analyze_capacity_scan.py --tag capacity-scan-apr17 --recommend
@@ -91,7 +91,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tag", type=str, default="capacity-scan-apr17",
                         help="run_meta.json tag to filter on")
-    parser.add_argument("--runs-dir", type=str, default="/work/qec_runs",
+    parser.add_argument("--runs-dir", type=str, default="runs/qec_runs",
                         help="Root directory holding run results")
     parser.add_argument("--recommend", action="store_true",
                         help="Emit per-distance sizing recommendation")

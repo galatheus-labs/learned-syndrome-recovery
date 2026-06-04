@@ -6,13 +6,15 @@ Outputs a summary that matches the paper's numbers.
 
 Usage:
     # Full reproduction (requires trained checkpoint + ShapeNet val data):
-    python reproduce_results.py --ckpt ckpts/resnet_combined_w256/ckpt_166000.pt
+    python reproduce_results.py --ckpt /path/to/compression_clean_v2_s42/ckpt_294000.pt \
+        --cfg configs/compression_clean_v2_s42.yaml --data /path/to/shapenet/val
 
     # Baselines only (no checkpoint needed):
     python reproduce_results.py --baselines-only
 
     # Quick smoke test (fewer samples):
-    python reproduce_results.py --ckpt ckpts/resnet_combined_w256/ckpt_166000.pt --n-samples 20
+    python reproduce_results.py --ckpt /path/to/compression_clean_v2_s42/ckpt_294000.pt \
+        --cfg configs/compression_clean_v2_s42.yaml --data /path/to/shapenet/val --n-samples 20
 """
 
 import argparse
@@ -1186,7 +1188,7 @@ def main():
     parser = argparse.ArgumentParser(description="Reproduce all paper results")
     parser.add_argument("--ckpt", type=str, default=None,
                         help="Path to trained checkpoint (needed for Sections 3-4)")
-    parser.add_argument("--cfg", type=str, default="configs/resnet_combined_w256.yaml",
+    parser.add_argument("--cfg", type=str, default="configs/compression_clean_v2_s42.yaml",
                         help="Training config yaml (for constraint config, coarse params)")
     parser.add_argument("--data", type=str, default="data/shapenet/val",
                         help="Path to ShapeNet val data for baseline benchmarks")

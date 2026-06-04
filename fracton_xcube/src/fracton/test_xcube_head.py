@@ -8,7 +8,7 @@ test that would have immediately caught the reduce_axis=(4,3,2) transpose bug
 
 We also regression-test the GroupNorm divisibility guard across ablation widths.
 
-Run: cd parity_diffusion/internal/fracton && python3 test_xcube_head.py
+Run: cd fracton_xcube/src/fracton && python3 test_xcube_head.py
 """
 
 from __future__ import annotations

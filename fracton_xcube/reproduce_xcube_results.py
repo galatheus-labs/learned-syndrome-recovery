@@ -15,9 +15,8 @@ PREDECLARED WIN CONDITION (write before reading numbers): learned block-failure
 L=3, p in {0.05}. A TIE or LOSS is a reportable null result, not a reason to
 keep tuning.
 
-Usage (CPU smoke):
-  cd parity_diffusion/internal/fracton
-  python3 reproduce_xcube_results.py --smoke --out xcube_reproduction.json
+Usage (CPU smoke, from fracton_xcube/):
+  python3 reproduce_xcube_results.py --smoke --skip-bw --out xcube_reproduction.json
 Full (design-only / GPU): raise --n-train, --epochs, add --ps and --Ls.
 """
 
@@ -34,7 +33,7 @@ import torch.nn as nn
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src" / "fracton"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # parity_diffusion/ for eval helpers
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "surface_code_qec" / "src"))
 
 from xcube_code import make_xcube, logical_operators, verify, sample_xerror_decoding_data
 from xcube_decoder import XCubeDecoder, evaluate

@@ -36,7 +36,7 @@
    "coordconv"
   ],
   "device": "cpu",
-  "out": "/Users/brianguarraci/scm/galareon/parity_diffusion/papers/fracton_arxiv/data/xcube_verify_all.json",
+  "out": "data/xcube_verify_all.json",
   "verify_only": true,
   "tables_only": false,
   "skip_bw": false,

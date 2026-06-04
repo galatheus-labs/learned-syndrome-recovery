@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tutorial: Structure-Aware Neural Decoding for the X-Cube Fracton Code</title>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root {
+    --ink: #1c2126;
+    --muted: #5a6572;
+    --accent: #2b5d8a;
+    --accent-soft: #eaf2f8;
+    --warn-bg: #fdf4e6;
+    --warn-br: #e0a64a;
+    --good-bg: #edf7ee;
+    --good-br: #5aa85f;
+    --gloss-bg: #f6f7f9;
+    --line: #d8dde3;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.62;
+    font-size: 18px;
+    margin: 0;
+    background: #fbfcfd;
+  }
+  .wrap {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  h1 {
+    font-size: 30px;
+    line-height: 1.25;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 19px;
+    margin: 0 0 8px;
+    font-weight: 400;
+  }
+  .byline {
+    color: var(--muted);
+    font-size: 15px;
+    margin: 0 0 36px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 24px;
+  }
+  h2 {
+    font-size: 23px;
+    margin: 52px 0 14px;
+    padding-top: 8px;
+    border-top: 2px solid var(--accent-soft);
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 19px;
+    margin: 30px 0 8px;
+    color: var(--ink);
+  }
+  p { margin: 12px 0; }
+  a { color: var(--accent); }
+  code {
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: #eef1f4;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .aside {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 22px 0;
+    font-size: 16.5px;
+  }
+  .aside .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-br);
+  }
+  .warn .label { color: #b06d11; }
+  .good {
+    background: var(--good-bg);
+    border-left: 4px solid var(--good-br);
+  }
+  .good .label { color: #3c7a41; }
+  .oneliner {
+    font-size: 20px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 20px 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 22px 0;
+    font-size: 15.5px;
+  }
+  caption {
+    caption-side: top;
+    text-align: left;
+    color: var(--muted);
+    font-size: 14.5px;
+    margin-bottom: 8px;
+    font-style: italic;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 7px 11px;
+    text-align: center;
+  }
+  th {
+    background: #f0f3f6;
+    font-weight: 600;
+  }
+  td.lbl, th.lbl { text-align: left; }
+  .win { font-weight: 700; color: #1f6b27; }
+  tbody tr:nth-child(even) td { background: #fafbfc; }
+  .glossary dt {
+    font-weight: 700;
+    margin-top: 14px;
+    color: var(--accent);
+  }
+  .glossary dd {
+    margin: 2px 0 0;
+    padding-left: 0;
+  }
+  .glossary {
+    background: var(--gloss-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 22px 22px;
+  }
+  ul, ol { padding-left: 26px; }
+  li { margin: 6px 0; }
+  .takeaway {
+    counter-reset: tk;
+    list-style: none;
+    padding-left: 0;
+  }
+  .takeaway li {
+    position: relative;
+    padding: 10px 10px 10px 46px;
+    margin: 10px 0;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .takeaway li::before {
+    counter-increment: tk;
+    content: counter(tk);
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 24px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .small { font-size: 15px; color: var(--muted); }
+  hr { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+  .figdesc {
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 12px 18px;
+    background: #fff;
+    font-size: 16px;
+    margin: 20px 0;
+  }
+  .step { color: var(--muted); font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Structure-Aware Neural Decoding for the X-Cube Fracton Code</h1>
+<p class="subtitle">A first-principles walkthrough &mdash; from undergraduate quantum mechanics up to the paper's result</p>
+<p class="byline">
+  Companion to the paper of the same name (<em>&ldquo;A Learned Recovery Layer whose Logical Error Rate Improves with System Size&rdquo;</em>), B. Guarraci, Galatheus.
+  We assume only a bachelor&rsquo;s-level physics background &mdash; qubits and Pauli operators, Hilbert spaces, projective measurement, commuting observables, linear algebra, and a passing acquaintance with phases of matter. From there we build every idea the paper needs, one link at a time, until the result is the only place the chain can land. All numerical values are taken verbatim from the paper&rsquo;s tables and its <code>data/</code> JSON outputs &mdash; nothing here is invented. An interactive companion with the same numbers lives in <code>examples.html</code>.
+</p>
+
+<div class="aside">
+  <span class="label">How to read this page</span>
+  It is a single argument, top to bottom. Each section ends where the next must begin: a goal creates a problem, the problem forces a tool, the tool fails on our code, and that failure is exactly the opening the paper walks through. We do <em>not</em> state the punchline up front &mdash; you should arrive at it. Sections 1&ndash;6 build the problem; 7 is the idea; 8&ndash;10 are the evidence; 11 stress-tests it; 12 states the conclusion you will by then have earned. Section 13 is a glossary you can fall back to at any point.
+</div>
+
+<!-- ===================================================== -->
+<h2>1. The goal: a memory that holds quantum information</h2>
+
+<p>
+  Start with the thing we actually want. A quantum computer is useless if it cannot <em>remember</em>. We need to store a quantum state &mdash; a vector in a Hilbert space, a superposition with real relative phases &mdash; and have it still be there, intact, much later. The trouble is that quantum states are exquisitely fragile: every stray coupling to the environment (decoherence) nudges the state, and unlike a classical bit you cannot simply read it to check on it, because measurement collapses the superposition you were trying to protect. Worse, the no-cloning theorem forbids the classical fix of keeping backup copies.
+</p>
+<p>
+  So &ldquo;just store it&rdquo; is off the table. The realistic goal comes in two flavours:
+</p>
+<ul>
+  <li><strong>Active</strong> error correction: constantly monitor the system through cleverly chosen measurements and apply corrections &mdash; babysitting the memory.</li>
+  <li><strong>Passive</strong>, or <em>self-correcting</em>, memory: engineer a physical system whose own energetics suppress errors, so the stored state survives for a long time with little intervention &mdash; a quantum analogue of how a fridge magnet keeps its magnetization. This is one of the holy grails of the field.</li>
+</ul>
+<p>
+  A class of exotic phases of matter called <strong>fracton order</strong> is a tantalizing candidate for the passive route, for reasons we will make precise in &sect;5. Its excitations cannot move freely, which suggests (heuristically) an energy barrier to errors that grows with system size. Whether that actually yields a long memory lifetime is a hard question about Hamiltonian dynamics that this paper does <em>not</em> settle &mdash; passive memory is the <em>motivation</em>, the backdrop, not a result claimed here.
+</p>
+<p>
+  But here is the point that survives regardless of the dynamics. <strong>Any</strong> memory, active or passive, is worthless unless, after noise has crept in, you can read out which state was stored &mdash; you must <em>recover</em> the logical information from the corrupted physical system. That recovery step is called <strong>decoding</strong>, and as we will see, fracton codes have a notorious decoding problem: the standard tools that work for ordinary quantum codes <em>do not apply</em> to them. The rest of this page is about building the decoder they were missing.
+</p>
+<p class="step">Next: to even define &ldquo;decoding,&rdquo; we need the machinery that detects errors without destroying the data.</p>
+
+<!-- ===================================================== -->
+<h2>2. The machinery: stabilizer codes</h2>
+
+<h3>2.1 Detecting an error without measuring the data</h3>
+<p>
+  The central trick of quantum error correction resolves the measurement paradox. You do not measure the logical state. Instead you measure a set of multi-qubit operators &mdash; the <strong>stabilizers</strong> &mdash; chosen so that (i) they all <em>commute</em> with one another, so they can be measured simultaneously, and (ii) they commute with the logical information, so measuring them tells you <em>nothing</em> about the stored state and therefore cannot collapse it.
+</p>
+<p>
+  Concretely, work in the \(N\)-qubit Pauli group: tensor products of \(\{I, X, Y, Z\}\). A <strong>stabilizer group</strong> \(\mathcal{S}\) is an abelian subgroup of the Pauli group not containing \(-I\). The <strong>codespace</strong> is the simultaneous \(+1\)-eigenspace of all its elements: the &ldquo;good&rdquo; states \(|\psi\rangle\) with \(S|\psi\rangle = +|\psi\rangle\) for every \(S \in \mathcal{S}\). Because the stabilizers commute, this joint eigenspace is well-defined and you can measure all of them at once.
+</p>
+<p>
+  Now suppose a Pauli error \(E\) strikes. Each stabilizer \(S\) either commutes or anticommutes with \(E\) (any two Paulis do one or the other). If they commute, \(S\) still reads \(+1\). If they anticommute, \(SE|\psi\rangle = -ES|\psi\rangle = -E|\psi\rangle\): the measurement now reads \(-1\). That flipped sign is a <strong>detection event</strong>. The pattern of which stabilizers read \(-1\) is the <strong>syndrome</strong> &mdash; and crucially it depends only on \(E\), not on the protected state \(|\psi\rangle\). You learn that something happened, and a fingerprint of <em>what</em>, without learning the secret.
+</p>
+<div class="aside">
+  <span class="label">Classical intuition</span>
+  Picture smoke detectors wired to overlapping zones of a building. A detector chirps if an <em>odd</em> number of the rooms it watches are on fire. From the chirping pattern you reconstruct which rooms are actually burning &mdash; without entering any room. The stabilizers are the detectors; the syndrome is the chirping pattern; reconstructing the fire is decoding.
+</div>
+
+<h3>2.2 The binary (GF(2)) picture</h3>
+<p>
+  For the codes we care about, all of this linearizes beautifully. Restrict attention to the bit-flip channel: errors built from \(X\) operators (we will justify this restriction in &sect;3.3). An \(X\)-error is then just a subset of qubits &mdash; a binary vector \(e \in \mathbb{F}_2^N\), where \(e_i = 1\) means &ldquo;qubit \(i\) was flipped.&rdquo; All arithmetic happens over <strong>\(\mathrm{GF}(2)\)</strong> (also written \(\mathbb{F}_2\) or \(\mathbb{Z}_2\)): the field \(\{0,1\}\) where \(+\) is XOR, \(1+1=0\), and there are no carries.
+</p>
+<p>
+  A stabilizer that anticommutes with \(X\)-errors is a \(Z\)-type operator, and you can write it as a row of a <strong>parity-check matrix</strong> \(H\): each row is one check, each column one qubit, and a \(1\) marks participation. The commute-or-anticommute question becomes a parity: check \(r\) fires iff an odd number of its qubits were flipped. Collecting all rows,
+</p>
+\[ s \;=\; H e \pmod 2, \]
+<p>
+  the <strong>syndrome</strong> \(s\) is the list of violated checks. The abstract Pauli statement &mdash; &ldquo;does \(E\) anticommute with stabilizer \(S\)?&rdquo; &mdash; is now a matrix-vector product over \(\mathbb{F}_2\). (More generally a Pauli maps to a binary symplectic vector with \(X\)- and \(Z\)-parts, and commutation is a symplectic inner product; for the bit-flip channel only the picture above is needed.)
+</p>
+
+<h3>2.3 CSS codes, logical qubits, distance, rate</h3>
+<p>
+  A <strong>CSS code</strong> is a stabilizer code whose checks split cleanly into independent \(X\)-type and \(Z\)-type families &mdash; the \(X\)-checks catch \(Z\)-errors, the \(Z\)-checks catch \(X\)-errors. The two families must be compatible (every \(X\)-check commutes with every \(Z\)-check), which over \(\mathbb{F}_2\) is exactly the orthogonality condition
+</p>
+\[ H_X H_Z^\top = 0. \]
+<p>
+  Counting dimensions then gives the number of protected <strong>logical qubits</strong>:
+</p>
+\[ k \;=\; N - \mathrm{rank}(H_X) - \mathrm{rank}(H_Z). \]
+<p>
+  The remaining vocabulary:
+</p>
+<ul>
+  <li><strong>Physical qubits</strong> (\(N\)): the noisy hardware degrees of freedom.</li>
+  <li><strong>Logical qubits</strong> (\(k\)): the protected information you actually care about; \(k \ll N\) is the redundancy that buys protection. The ratio \(k/N\) is the <strong>rate</strong>.</li>
+  <li><strong>Logical operators</strong>: Pauli operators that commute with every stabilizer (so they are invisible to the checks) but are <em>not</em> themselves stabilizers. They move you between distinct stored states. An error equal to a logical operator is the nightmare: undetectable, and it silently rewrites your data.</li>
+  <li><strong>Code distance</strong> \(d\): the weight (number of qubits) of the smallest such undetectable, data-corrupting operator. Bigger \(d\) = more robust.</li>
+</ul>
+<p class="small">
+  We will see the paper machine-verify \(H_X H_Z^\top = 0\) and \(k = N - \mathrm{rank}\,H_X - \mathrm{rank}\,H_Z\) directly from the matrices in &sect;9.1 &mdash; the code object is checked to be real before any learning happens.
+</p>
+<p class="step">Next: the checks fire, but they don&rsquo;t hand you the error. Turning the syndrome back into a correction is the decoding problem.</p>
+
+<!-- ===================================================== -->
+<h2>3. The decoding problem</h2>
+
+<h3>3.1 You only ever see the syndrome</h3>
+<p>
+  Noise applies some error \(e\); you cannot observe it. All you observe is \(s = He\): which checks fired. The <strong>decoder</strong> must look at \(s\) and propose a correction. The difficulty is fundamental and combinatorial: the map \(e \mapsto He\) is many-to-one, so exponentially many errors are consistent with any given syndrome. You can never know which \(e\) actually happened.
+</p>
+
+<h3>3.2 Decode to the coset, not the error</h3>
+<p>
+  Fortunately you do not need the exact \(e\). Two errors that differ by a stabilizer are physically <em>identical</em> &mdash; correcting one corrects the other, because applying a stabilizer does nothing to a codestate. So the errors consistent with \(s\) partition into equivalence classes, and within the relevant group only one distinction matters: <strong>which logical coset</strong> the error lies in. Formally, fix once and for all <em>some</em> error \(R(s)\) consistent with the syndrome (a &ldquo;pure error,&rdquo; read directly off \(H_Z\)). The true error satisfies \(e = R(s) \oplus (\text{logical}+\text{stabilizer part})\), so the only freedom left is the logical coset of the residual \(e \oplus R(s)\).
+</p>
+<p>
+  Getting that coset <em>right</em> is a clean recovery. Getting it <em>wrong</em> means you &ldquo;corrected&rdquo; the state but actually applied an undetectable logical operator &mdash; a <strong>logical error</strong>, silent data corruption. This reframing &mdash; <em>decode to the coset, not the exact error</em> &mdash; is the hinge the paper&rsquo;s learning task hangs on (&sect;6).
+</p>
+<div class="aside">
+  <span class="label">Why decoding is hard, and why geometry decides</span>
+  Optimal decoding &mdash; pick the most probable coset given \(s\) &mdash; is computationally intractable for large codes. Every practical decoder is a fast, clever approximation, and <em>which</em> approximation works depends entirely on the <strong>geometry</strong> of the code: how errors and detection events are laid out in space. That dependence is the recurring theme of this entire page.
+</div>
+
+<h3>3.3 The noise model: the code-capacity channel</h3>
+<p>
+  To make &ldquo;the error rate&rdquo; well-defined we fix the simplest standard noise model, the <strong>code-capacity channel</strong>: each qubit is independently hit by an \(X\) (bit-flip) error with probability \(p\), and the stabilizers are measured perfectly, once. No measurement errors, no repeated rounds, no circuit-level noise. This is the cleanest setting in which to ask whether a decoder exploits the code&rsquo;s structure &mdash; and it is why &sect;2.2&rsquo;s purely binary, \(X\)-only picture is exactly what we need. The bit-flip errors are detected by the \(Z\)-type checks, so from here on &ldquo;syndrome&rdquo; means the pattern of violated \(Z\)-checks.
+</p>
+<p class="step">Next: the field already has two workhorse decoders. We need to understand them &mdash; and see precisely where each one is about to break.</p>
+
+<!-- ===================================================== -->
+<h2>4. The standard decoders &mdash; and the cliff ahead</h2>
+
+<h3>4.1 MWPM: minimum-weight perfect matching</h3>
+<p>
+  The famous <strong>surface code</strong> is decoded by MWPM, and it works because of a special geometric fact: there, an error is a <em>string</em> of flips, and it lights up exactly <em>two</em> detection events &mdash; one at each endpoint of the string. Decoding then reduces to: given the lit-up defects, pair them up with the cheapest set of connecting strings. &ldquo;Pair them up at minimum total cost&rdquo; is precisely minimum-weight perfect matching, a classic graph problem with fast, near-optimal algorithms. The entire method <em>relies</em> on defects coming in pairs joined by a string you can trace.
+</p>
+
+<h3>4.2 BP+OSD: belief propagation + ordered-statistics decoding</h3>
+<p>
+  For a general low-density parity-check (qLDPC) code without that string structure, the default is <strong>BP+OSD</strong>. <em>Belief propagation</em> is iterative message passing on the Tanner graph (qubits on one side, checks on the other): each check and qubit repeatedly exchange estimates &mdash; &ldquo;beliefs&rdquo; &mdash; about how likely each qubit is to be flipped, hopefully converging to a consistent assignment. <em>OSD</em> (we use order-0, hence <strong>BP+OSD-0</strong>) is a linear-algebra cleanup that produces a valid answer when BP fails to converge. BP is excellent when the Tanner graph is sparse and locally tree-like; it gets <strong>confused when checks overlap heavily and form short loops</strong>, because the same evidence circulates around the loops and is double-counted.
+</p>
+<p>
+  Hold onto the two preconditions: MWPM needs <em>defects in string-joined pairs</em>; BP needs a <em>loop-sparse</em> check graph. The next section introduces a code that violates both at once &mdash; and that is the whole opening.
+</p>
+
+<!-- ===================================================== -->
+<h2>5. Fracton order and the X-cube code (the turn)</h2>
+
+<h3>5.1 Restricted mobility: fractons, lineons, planons</h3>
+<p>
+  <strong>Fracton order</strong> is a class of phases discovered around 2011&ndash;2016 (Chamon; Haah; Vijay&ndash;Haah&ndash;Fu) whose defining strangeness is the <em>restricted mobility</em> of excitations. In an ordinary topological phase like the toric/surface code, a defect is a free particle: a string operator drags it anywhere. In a fracton phase the excitations are geometrically stuck:
+</p>
+<ul>
+  <li><strong>Fracton</strong>: completely immobile in isolation &mdash; it cannot move at all without creating additional excitations.</li>
+  <li><strong>Lineon</strong>: mobile only along a single <em>line</em> (1D).</li>
+  <li><strong>Planon</strong>: mobile only within a single <em>plane</em> (2D).</li>
+</ul>
+<p>
+  This restricted mobility is what makes fracton codes attractive as memory <em>motivation</em>: it yields nonlocal conservation laws and a <strong>subextensive but growing number of logical qubits</strong>. The X-cube code stores \(k = 6L-3\) of them on an \(L\times L\times L\) torus &mdash; a count that <em>grows</em> with \(L\), rather than a fixed handful. (This is a growing logical <em>count</em>, not a high asymptotic <em>rate</em>: \(k/N = (6L-3)/3L^3 = O(1/L^2) \to 0\).) It is sometimes <em>conjectured</em> that immobile excitations imply an energy barrier growing with system size, hence a long-lived self-correcting memory &mdash; but that depends on Hamiltonian dynamics and lifetime scaling, which this paper does <strong>not</strong> establish. Self-correction is the motivating backdrop, not a demonstrated property here.
+</p>
+
+<h3>5.2 The X-cube code, concretely</h3>
+<p>
+  The <strong>X-cube code</strong> (Vijay&ndash;Haah&ndash;Fu, 2016) lives on a periodic \(L\times L\times L\) cubic lattice with qubits on the <strong>edges</strong>: \(N = 3L^3\) of them (three edge-directions per site). It is a CSS code with two stabilizer families &mdash; equivalently the ground space of \(H = -\sum_c A_c - \sum_v B_v\) with:
+</p>
+<ul>
+  <li><strong>\(Z\)-type &ldquo;cube&rdquo; operators</strong> \(A_c\): the product of \(Z\) over the twelve edges of each elementary cube. One per cube-center, so exactly \(L^3\) of them.</li>
+  <li><strong>\(X\)-type &ldquo;cross&rdquo; operators</strong> \(B_v\): at each vertex, a four-edge planar cross in each of the \(xy\), \(yz\), \(xz\) planes (two independent per vertex; the third is the product of the other two).</li>
+</ul>
+<div class="aside">
+  <span class="label">The single most important data structure</span>
+  We study the bit-flip (\(X\)) channel at rate \(p\), detected by the cube (\(Z\)) stabilizers. Because there is exactly one cube check per cube-center, <strong>the syndrome is naturally an \(L\times L\times L\) grid of bits &mdash; a 3D scalar field.</strong> Remember this: a 3D image-like object, with no time axis, is the perfect input for a 3D convolutional network. The entire architecture in &sect;7 follows from this observation.
+</div>
+<p>
+  And the decoding target is the vector of <strong>\(6L-3\) logical-\(Z\) parities</strong> of the error,
+</p>
+\[ \ell_j \;=\; \langle \mathrm{logical}_Z^{(j)},\, e\rangle \bmod 2, \qquad j = 1,\dots,6L-3, \]
+<p>
+  one bit per logical sector: did the error land in the &ldquo;flipped&rdquo; or &ldquo;not-flipped&rdquo; coset of sector \(j\)? Predicting all \(6L-3\) of them <em>is</em> the full decode (this is the coset statement of &sect;3.2, made concrete). We report two metrics:
+</p>
+<ul>
+  <li><strong>Block failure</strong>: the fraction of shots where <em>any one</em> of the \(6L-3\) sectors is wrong. Strict, all-or-nothing. (Basis-independent: it is the genuine &ldquo;did the whole block survive&rdquo; event.)</li>
+  <li><strong>Per-sector LER</strong> (logical error rate): the average fraction of <em>individual</em> sectors wrong &mdash; the per-logical-qubit metric, the fair one for a high-\(k\) code. (Reported in a fixed logical basis, so it is basis-relative.)</li>
+</ul>
+<p class="small">
+  Because block failure needs all \(6L-3\) bits right at once and \(6L-3\) grows with \(L\), it is harsh at large \(L\) for everyone &mdash; one slip ruins the block. Per-sector LER is where per-qubit quality, and the scaling story, show up cleanly.
+</p>
+
+<h3>5.3 Why both standard decoders die here</h3>
+<div class="warn">
+  <span class="label">The structural problem &mdash; both preconditions from &sect;4 fail</span>
+  In the X-cube code an \(X\)-error does <strong>not</strong> create a string-joined pair of defects. It excites cube stabilizers <em>four at a time</em>, at the corners of a flat membrane of flipped edges, and these excitations are <em>immobile fractons</em>. There is no string connecting a pair, so <strong>surface-code-style pair MWPM does not directly apply</strong> &mdash; precondition&nbsp;1 violated. And the \(Z\)-checks are dense, heavily overlapping twelve-qubit cube operators &mdash; exactly the loop-rich Tanner graph that makes <strong>BP+OSD-0 degrade sharply</strong> &mdash; precondition&nbsp;2 violated. The paper measures BP convergence collapsing to about <strong>0.03</strong> (3%) at \(L=6\), \(p=0.05\): at large codes BP is essentially not converging. Code-specific decoders <em>do</em> exist (Brown&ndash;Williamson, &sect;8), but X-cube has no universally adopted MWPM-like standard, and generic BP+OSD-0 chokes on the dense cube checks.
+</div>
+<p>
+  This is the opening. The very feature that makes fractons attractive &mdash; logical information carried by <em>non-local line and membrane structures</em> (lineon lines, planon membranes) rather than short strings &mdash; is exactly what defeats the standard decoders, which only ever look at local neighbourhoods or trace local strings. So the paper makes a bet: <em>build a decoder whose architecture is shaped like those lines, and it can read the non-local structure the standard methods cannot.</em>
+</p>
+<p class="step">Next: before we can train anything, we must turn &ldquo;decode a quantum code&rdquo; into a well-posed learning problem.</p>
+
+<!-- ===================================================== -->
+<h2>6. Reframing decoding as a learning problem</h2>
+
+<h3>6.1 Decoding as coset classification</h3>
+<p>
+  Here is the move that converts &ldquo;decode a quantum code&rdquo; into &ldquo;train a classifier.&rdquo; By &sect;3.2, given a syndrome \(s\) we fix a pure error \(R(s)\) (directly from \(H_Z\)), and the only remaining ambiguity is the logical coset of \(e \oplus R(s)\) &mdash; exactly the \(6L-3\) parity bits. So the recovery is
+</p>
+\[ \text{recovery} \;=\; R(s)\ \text{(fixed, from }H_Z\text{)} \quad\text{then}\quad \text{predicted logical representative}. \]
+<p>
+  In the experiments the network is trained to predict the raw logical parities \(\langle \mathrm{logical}_Z^{(j)}, e\rangle\) of the sampled error; an explicit recovery with an arbitrary \(R(s)\) just adds a fixed known offset \(\langle \mathrm{logical}_Z^{(j)}, R(s)\rangle\) (zero if \(R(s)\) is chosen with zero logical parities). A per-sector logical error occurs precisely when a predicted parity bit is wrong. This is <strong>amortized maximum-likelihood coset decoding</strong> &mdash; the same target neural surface-code decoders already use. Predicting the \(6L-3\) parities is the <em>full</em> decoding output, not a proxy or a toy.
+</p>
+
+<h3>6.2 The input is a 3D image, so the model is a 3D CNN</h3>
+<p>
+  We have a supervised problem: input = the \(L\times L\times L\) cube-syndrome field (a 3D binary image, &sect;5.2); output = \(6L-3\) parity bits. A 3D image with no time axis is the natural home of a <strong>3D convolutional neural network</strong> &mdash; the same inductive bias (locality + translation equivariance) that makes CNNs work on ordinary images, now over a periodic cubic lattice. That choice is forced by the data structure, not imposed. What is <em>not</em> yet decided is how to read out the non-local logical lines &mdash; and that read-out head is the whole inventive step.
+</p>
+<p class="step">Next: the one code-aware component &mdash; the head that aggregates along the logical lines.</p>
+
+<!-- ===================================================== -->
+<h2>7. The architecture: <span style="font-variant:small-caps">AxisLineonHead</span></h2>
+<p>The decoder is a generic body plus a code-aware head:</p>
+<ul>
+  <li><strong>Body</strong> (generic): a weight-shared 3D residual CNN, default width 64, depth 8, reading the \(L^3\) cube-syndrome field. &ldquo;Weight-shared&rdquo; means the same small filters slide over the whole lattice &mdash; the network is translation-equivariant and its parameter count does <em>not</em> grow with \(L\). Nothing here is code-specific.</li>
+  <li><strong>Head</strong> (the only code-aware part): <strong>line aggregation</strong>. Features are <em>collapsed along each logical-line axis</em> (a mean-and-max pool down each axis), passed through a 2D transverse convolution, then gathered into the \(6L-3\) per-sector logits. This is the inductive bias that matches the lineon/planon structure: it literally integrates evidence <em>along the lines where the logical information lives</em>.</li>
+</ul>
+<div class="aside">
+  <span class="label">Why the head is the whole story</span>
+  A generic CNN with a generic (say, globally-pooled) head only ever sees local patches and their average. The line-aggregation head is what lets the network combine evidence along entire non-local lines &mdash; the structure the code hides its logical information in, and the structure no local rule can reach. &sect;10 isolates this with two controls; the architecture is built precisely so that those controls have something to find.
+</div>
+<p class="small">
+  Training recipe (per cell): \(3\times10^5\) samples, 30 epochs, a cosine learning-rate schedule, and batch size 2048 for \(L\le6\) (reduced to 768 at \(L=8\) and 384 at \(L=10\) for memory). Each \((L,p)\) cell is trained <em>separately</em> &mdash; so the scaling claim ahead is about a <em>family</em> of separately-trained decoders, one per size, not zero-shot transfer to bigger codes. Keep that distinction; a skeptic will (&sect;11).
+</p>
+<p class="step">Next: before trusting any number, fix what would make the numbers believable.</p>
+
+<!-- ===================================================== -->
+<h2>8. What would make the numbers believable</h2>
+<p>
+  A win is only meaningful against honest baselines, with controls that explain it, under a protocol fixed in advance. The paper sets all three <em>before</em> showing results.
+</p>
+
+<h3>8.1 Baselines (what we must beat)</h3>
+<ul>
+  <li><strong>Trivial</strong>: always predict the all-zero logical class. In the absence of any decoding this is the maximum-likelihood guess and the honest floor for the per-sector task. Beating trivial is the minimum bar &mdash; and a surprisingly hard one at large \(L\).</li>
+  <li><strong>BP+OSD-0</strong>: the standard general-purpose qLDPC decoder (&sect;4.2), run on \(H_Z\) with order-0 OSD. Reported with both its block failure <em>and</em> its BP convergence fraction, so its structural failure is visible.</li>
+  <li><strong>BW-naive</strong> (naive-weight Brown&ndash;Williamson): the <em>code-specific</em> algorithmic baseline &mdash; the strongest comparison the paper implements &mdash; exploiting the rigid fracton structure to reduce X-cube decoding to 2D matching problems. The paper implements only the <strong>naive-weight cube-defect (&ldquo;planeon&rdquo;) matching variant</strong> (per-plane MWPM + cluster neutralization; 100% syndrome-consistent, exact on isolated single-edge errors), which is why it is labelled <strong>BW-naive</strong> everywhere. It does <em>not</em> implement BW&rsquo;s BP edge-reweighting that lifts the threshold from 3.7% to 4.3% &mdash; so the paper does not claim to benchmark the fully tuned Brown&ndash;Williamson decoder.</li>
+</ul>
+
+<h3>8.2 A control that explains the win: the Gate-0 signal-existence oracle</h3>
+<p>
+  This is the cleverest piece of the design, and not a competitor &mdash; it is a control. The <strong>Gate-0 oracle</strong> is a held-out, radius-1 local-pattern maximum-likelihood lookup: for each logical line it is handed the empirically best prediction based only on the syndrome in a <em>radius-1 transverse neighbourhood</em> of that line. Its advantage over trivial is an <em>empirical estimate of how much signal lives in that local window</em> &mdash; an indicative measure of locally-available information, not a formal Bayes-optimal bound over all conceivable local decoders. The logic: <strong>if the local window contains almost no usable signal, yet the network wins big, the network must be using non-local information.</strong>
+</p>
+
+<h3>8.3 The protocol (the rigor)</h3>
+<ul>
+  <li>Every cell run over <strong>3 seeds</strong> (42, 43, 44), with a <strong>disjoint test sampler seed</strong> offset from train and validation &mdash; no test-on-train leakage.</li>
+  <li>Seed-bootstrap <strong>95% confidence intervals</strong> on block failure; <strong>paired McNemar</strong> tests on identical shots (more on this in &sect;11). Pairing on the same shots is what cancels the luck of which shots were easy.</li>
+  <li>A <strong>predeclared win condition</strong>, fixed <em>before</em> evaluation: learned block-failure CI upper bound below the trivial CI lower bound at \(L=3, p=0.05\). No post-hoc choosing of which result &ldquo;counts.&rdquo;</li>
+  <li>Every number emitted by a single script, <code>reproduce_xcube_results.py</code>.</li>
+</ul>
+<p class="step">Next: the evidence.</p>
+
+<!-- ===================================================== -->
+<h2>9. The results</h2>
+
+<h3>9.1 Sanity: the code is exactly what we claimed</h3>
+<p>
+  Before any decoding, the script machine-verifies CSS commutation (\(H_X H_Z^\top = 0\)) and the logical-qubit count \(k = 6L-3\) straight from the parity-check matrices &mdash; the &sect;2.3 formulas, checked:
+</p>
+<table>
+  <caption>Code verification (from <code>data/xcube_verify_all.json</code>, emitted by <code>reproduce_xcube_results.py&nbsp;--verify-only</code> over every simulated size).</caption>
+  <thead><tr><th>\(L\)</th><th>\(N\) (qubits)</th><th>\(\mathrm{rank}\,H_X\)</th><th>\(\mathrm{rank}\,H_Z\)</th><th>\(k\) computed</th><th>\(6L-3\)</th><th>CSS ok?</th></tr></thead>
+  <tbody>
+    <tr><td>2</td><td>24</td><td>11</td><td>4</td><td>9</td><td>9</td><td>yes</td></tr>
+    <tr><td>3</td><td>81</td><td>46</td><td>20</td><td>15</td><td>15</td><td>yes</td></tr>
+    <tr><td>4</td><td>192</td><td>117</td><td>54</td><td>21</td><td>21</td><td>yes</td></tr>
+    <tr><td>5</td><td>375</td><td>236</td><td>112</td><td>27</td><td>27</td><td>yes</td></tr>
+    <tr><td>6</td><td>648</td><td>415</td><td>200</td><td>33</td><td>33</td><td>yes</td></tr>
+    <tr><td>8</td><td>1536</td><td>1001</td><td>490</td><td>45</td><td>45</td><td>yes</td></tr>
+    <tr><td>10</td><td>3000</td><td>1971</td><td>972</td><td>57</td><td>57</td><td>yes</td></tr>
+  </tbody>
+</table>
+<p class="small">
+  \(N = 3L^3\) as expected for edge qubits, and \(k\) matches \(6L-3\) exactly across every simulated size \(L\in\{2,3,4,5,6,8,10\}\) (\(k = 9,15,21,27,33,45,57\)) &mdash; including the \(L=8\) and \(L=10\) sizes the scaling rows report. The code object is real and correct before any learning happens.
+</p>
+
+<h3>9.2 The main grid: the learned decoder wins everywhere</h3>
+<p>
+  Table 1 of the paper is the centerpiece. Lower is better in every column; bold marks the winner (always the learned decoder); these are 3-seed means.
+</p>
+<table>
+  <caption>Block failure and per-sector LER (3-seed means), learned decoder vs. our naive-weight Brown&ndash;Williamson decoder (&ldquo;BW-naive&rdquo;), BP+OSD-0, and the trivial floor. From Table 1 / <code>data/</code>.</caption>
+  <thead>
+    <tr>
+      <th>\(L\)</th><th>\(p\)</th>
+      <th colspan="4">Block failure</th>
+      <th colspan="4">Per-sector LER</th>
+    </tr>
+    <tr>
+      <th></th><th></th>
+      <th>Learned</th><th>BW-naive</th><th>BP+OSD-0</th><th>Triv.</th>
+      <th>Learned</th><th>BW-naive</th><th>BP+OSD-0</th><th>Triv.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>3</td><td>0.03</td><td class="win">0.306</td><td>0.391</td><td>0.372</td><td>0.735</td><td class="win">0.042</td><td>0.098</td><td>0.110</td><td>0.085</td></tr>
+    <tr><td>3</td><td>0.05</td><td class="win">0.626</td><td>0.703</td><td>0.688</td><td>0.887</td><td class="win">0.104</td><td>0.204</td><td>0.228</td><td>0.136</td></tr>
+    <tr><td>4</td><td>0.03</td><td class="win">0.343</td><td>0.682</td><td>0.465</td><td>0.914</td><td class="win">0.035</td><td>0.169</td><td>0.140</td><td>0.110</td></tr>
+    <tr><td>4</td><td>0.05</td><td class="win">0.724</td><td>0.937</td><td>0.840</td><td>0.981</td><td class="win">0.110</td><td>0.301</td><td>0.316</td><td>0.172</td></tr>
+    <tr><td>6</td><td>0.03</td><td class="win">0.282</td><td>0.935</td><td>0.595</td><td>0.996</td><td class="win">0.018</td><td>0.242</td><td>0.233</td><td>0.155</td></tr>
+    <tr><td>6</td><td>0.05</td><td class="win">0.800</td><td>0.999</td><td>0.979</td><td>1.000</td><td class="win">0.104</td><td>0.392</td><td>0.451</td><td>0.234</td></tr>
+    <tr><td>8</td><td>0.03</td><td class="win">0.194</td><td>0.993</td><td>0.864</td><td>1.000</td><td class="win">0.008</td><td>0.295</td><td>0.361</td><td>0.195</td></tr>
+    <tr><td>8</td><td>0.05</td><td class="win">0.850</td><td>1.000</td><td>1.000</td><td>1.000</td><td class="win">0.095</td><td>0.441</td><td>0.492</td><td>0.285</td></tr>
+    <tr><td>10</td><td>0.03</td><td class="win">0.118</td><td>1.000</td><td>0.978</td><td>1.000</td><td class="win">0.003</td><td>0.336</td><td>0.427</td><td>0.231</td></tr>
+    <tr><td>10</td><td>0.05</td><td class="win">0.863</td><td>1.000</td><td>1.000</td><td>1.000</td><td class="win">0.080</td><td>0.466</td><td>0.494</td><td>0.326</td></tr>
+  </tbody>
+</table>
+<p>
+  Reading it: at <em>every</em> operating point, on <em>both</em> metrics, the learned decoder is strictly best &mdash; it beats our BW-naive implementation, BP+OSD-0, and trivial at every cell. The seed CIs against trivial do not overlap, and paired McNemar gives \(p < 10^{-12}\) against trivial and BP+OSD-0 at every cell (and against BW-naive for \(L\le 6\), where the paired test is tabulated; BW-naive is compared by aggregate failure rate, not paired shot-by-shot, at \(L\ge 8\)). For example at \(L=3, p=0.03\): learned-vs-trivial \(b=53294\) wins to \(c=1794\) losses; learned-vs-BP+OSD-0 \(b=511\) vs \(c=99\); learned-vs-BW-naive \(b=12648\) vs \(c=2499\). The lopsided \(b \gg c\) is what makes the win statistically real, not a coin flip. (Full per-cell CIs and counts are in &sect;11.)
+</p>
+<p>
+  And the <strong>predeclared win condition</strong> of &sect;8.3 is met: at \(L=3, p=0.05\) the learned block-failure CI upper bound \(0.6282\) sits below the trivial CI lower bound \(0.8859\) &mdash; non-overlapping, learned below trivial. Declaring this <em>before</em> looking at the data is what makes it a genuine test rather than a story told afterward.
+</p>
+
+<h3>9.3 The headline: per-sector accuracy <em>improves</em> as the code grows</h3>
+<p>This is the result the title promises. Read the per-sector LER at \(p=0.03\) as \(L\) goes \(3 \to 4 \to 6 \to 8 \to 10\):</p>
+<table>
+  <caption>Per-sector LER at \(p=0.03\) vs. code size. Learned <em>improves</em>; everyone else <em>worsens</em>.</caption>
+  <thead><tr><th>\(L\)</th><th>Learned</th><th>BP+OSD-0</th><th>Trivial</th><th>BW-naive</th></tr></thead>
+  <tbody>
+    <tr><td>3</td><td class="win">0.042</td><td>0.110</td><td>0.085</td><td>0.098</td></tr>
+    <tr><td>4</td><td class="win">0.035</td><td>0.140</td><td>0.110</td><td>0.169</td></tr>
+    <tr><td>6</td><td class="win">0.018</td><td>0.233</td><td>0.155</td><td>0.242</td></tr>
+    <tr><td>8</td><td class="win">0.008</td><td>0.361</td><td>0.195</td><td>0.295</td></tr>
+    <tr><td>10</td><td class="win">0.003</td><td>0.427</td><td>0.231</td><td>0.336</td></tr>
+    <tr><td>trend</td><td class="win">&darr; better</td><td>&uarr; worse</td><td>&uarr; worse</td><td>&uarr; worse</td></tr>
+  </tbody>
+</table>
+<p>
+  The learned per-sector LER drops \(0.042 \to 0.035 \to 0.018 \to 0.008 \to 0.003\), while trivial worsens \(0.085 \to 0.110 \to 0.155 \to 0.195 \to 0.231\) and BP+OSD-0 worsens \(0.110 \to 0.140 \to 0.233 \to 0.361 \to 0.427\). At \(L=6\) the learned decoder is roughly a <strong>9&times;</strong> per-sector improvement over trivial, widening to <strong>~24&times;</strong> at \(L=8\) and <strong>~66&times;</strong> at \(L=10\) &mdash; where, strikingly, both BP+OSD-0 and BW-naive per-sector LER now <em>exceed</em> the trivial floor, leaving the learned decoder the only one of the four that beats doing nothing <em>on the per-sector metric</em> (its learned-vs-trivial McNemar at \(L=8,p=0.03\) has \(c=0\): trivial never once beat it across 72,574 discordant shots, and the same holds at \(L=10\): \(c=0\) across 79,351 shots). Against BW-naive the margin <em>widens</em> with size: at \(L=6, p=0.03\) the learned LER (0.018) is about <strong>13&times;</strong> below BW-naive&rsquo;s (0.242). The basis-invariant block-failure rate tells the same story from \(L=4\) onward (\(0.343 \to 0.118\) at \(p=0.03\)).
+</p>
+<div class="good">
+  <span class="label">Why this is <em>the</em> number</span>
+  A lookup table, or any fixed-capacity local rule, must memorize an exponentially growing space as the code grows &mdash; it cannot improve with size. A decoder whose accuracy <em>improves</em> with \(L\) is exhibiting precisely the scaling behaviour a fault-tolerant memory needs: below threshold, the logical error rate must <em>fall</em> as the code grows. That qualitative signature &mdash; not merely &ldquo;our number is smaller&rdquo; &mdash; is the point. (Nuance the paper states: BW-naive&rsquo;s per-sector LER rises above the trivial floor by \(L=6\) because it ignores a wrapping-line degeneracy that grows with the code, while still beating trivial on block failure.)
+</div>
+<p>
+  Meanwhile BP+OSD-0&rsquo;s failure is structural, exactly as &sect;5.3 predicted: its BP convergence fraction falls from about <strong>0.8</strong> at \(L=3\) to about <strong>0.03</strong> at \(L=6, p=0.05\). The loop-heavy cube checks defeat message passing.
+</p>
+<p class="step">Next: winning is not the same as understanding <em>why</em>. Two controls turn the win into a mechanism.</p>
+
+<!-- ===================================================== -->
+<h2>10. Why it works: the mechanism</h2>
+
+<h3>10.1 Control #1 &mdash; the ablation: head, not capacity</h3>
+<p>
+  Is the win raw network capacity, or specifically the line-aware head? The ablation swaps out <em>only</em> the head, holding the body fixed, at \(L=3, p=0.03\), seed 42:
+</p>
+<table>
+  <caption>Head ablation (Table 2). Global pooling ties trivial <em>exactly</em>; structure-preserving heads win. From <code>data/</code> section <code>ablation</code>.</caption>
+  <thead><tr><th class="lbl">Head</th><th>Block failure</th><th>Per-sector LER</th></tr></thead>
+  <tbody>
+    <tr><td class="lbl">Trivial (floor)</td><td>0.7342</td><td>0.0846</td></tr>
+    <tr><td class="lbl">Global average pool</td><td>0.7342</td><td>0.0847</td></tr>
+    <tr><td class="lbl">Coordinate conv</td><td>0.3022</td><td>0.0420</td></tr>
+    <tr><td class="lbl"><span style="font-variant:small-caps">AxisLineonHead</span></td><td>0.3026</td><td>0.0421</td></tr>
+  </tbody>
+</table>
+<p>
+  The result is sharp: the global-average-pool head &mdash; same powerful CNN body, but a head that <em>destroys</em> spatial structure by averaging everything together &mdash; collapses to <strong>exactly</strong> the trivial baseline (0.7342). It learns nothing useful. Swap in either structure-preserving head (line aggregation or coordinate convolution) and the win returns (0.303 / 0.302). <strong>The head, not the body&rsquo;s capacity, carries the result.</strong> Capacity without the right inductive bias is worthless here.
+</p>
+
+<h3>10.2 Control #2 &mdash; the oracle: non-local, not local</h3>
+<p>
+  The &sect;8.2 Gate-0 oracle now pays off. It estimates how much advantage the best <em>radius-1 local</em> rule could extract:
+</p>
+<table>
+  <caption>Radius-1 local-pattern ML lookup&rsquo;s relative per-sector advantage over trivial (Gate-0 oracle), from <code>data/</code> section <code>gate0_oracle</code>.</caption>
+  <thead><tr><th>Cell</th><th>Local-window advantage over trivial</th></tr></thead>
+  <tbody>
+    <tr><td>\(L=3, p=0.03\)</td><td>34.2%</td></tr>
+    <tr><td>\(L=3, p=0.05\)</td><td>7.3%</td></tr>
+    <tr><td>\(L=4, p=0.03\)</td><td>5.7%</td></tr>
+    <tr><td>\(L=4, p=0.05\)</td><td>0.1%</td></tr>
+    <tr><td>\(L=6\) (all cells)</td><td>&le; 0.3%</td></tr>
+  </tbody>
+</table>
+<p>
+  The radius-1 local signal <strong>largely collapses by \(L=4\)</strong> and is negligible by \(L=6\) &mdash; the best local-window rule could barely beat the floor. Yet the learned decoder wins <em>decisively</em> at \(L=4\) and \(L=6\) (Table 1). So it cannot be leaning on local patterns: it must be exploiting <strong>non-local correlations</strong> &mdash; the lineon/planon line and membrane structure. That dovetails with the ablation: line aggregation is precisely the inductive bias that surfaces that non-local structure. Two independent controls, one conclusion.
+</p>
+<p class="step">Next: put on a referee&rsquo;s hat and try to break it.</p>
+
+<!-- ===================================================== -->
+<h2>11. Reading it like a skeptical reviewer</h2>
+<p>You are now the author reviewing your own work. Here is where a sharp referee will press &mdash; and how the paper answers.</p>
+
+<h3>11.1 Claims worth scrutinizing</h3>
+<ul>
+  <li><strong>&ldquo;First neural decoder for X-cube.&rdquo;</strong> A novelty claim. The related-work section is careful: neural decoders exist for surface/toric codes; fracton <em>decoding</em> work is algorithmic (Brown&ndash;Williamson); learned message-passing decoders exist for qLDPC codes (e.g. Astra) but not for X-cube; neural-network <em>quantum states</em> address fracton <em>ground states</em>, not decoding. The novelty is the not-previously-combined intersection (neural &amp; X-cube-specific). Check the cited surveys genuinely support &ldquo;each piece is mainstream, the combination is new.&rdquo;</li>
+  <li><strong>&ldquo;Improves with code size.&rdquo;</strong> The strongest claim. Verify it is about <em>per-sector LER at fixed \(p\)</em>, and that each \(L\) is trained <em>separately</em> &mdash; a scaling property of the decoder family, not zero-shot transfer to bigger codes. The paper is explicit. Five sizes (\(L=3,4,6,8,10\)) anchor the trend; a referee may still want an intermediate \(L=5\) to be sure the curve doesn&rsquo;t turn around.</li>
+  <li><strong>&ldquo;The win is non-local.&rdquo;</strong> This rests on the Gate-0 oracle faithfully capturing the locally-available signal. Scrutinize its definition: it is a <em>radius-1</em> window, and it caps at 20,000 distinct syndromes (<code>n_distinct_syndromes_cap</code>). Ask whether radius-1 and that cap could <em>understate</em> local signal &mdash; the mechanism argument needs the local estimate to be a fair measure, and it is presented as an empirical estimate, not a formal bound over all local decoders.</li>
+</ul>
+
+<h3>11.2 Is the comparison fair? (baseline parity)</h3>
+<ul>
+  <li><strong>Trivial</strong> is the honest floor &mdash; good. But block failure is brutal for trivial at large \(L\) by construction (all \(6L-3\) bits must be right), so &ldquo;beats trivial on block failure&rdquo; at \(L=6\) is somewhat easy. The <em>per-sector</em> comparison is the meaningful one, and the paper leads with it.</li>
+  <li><strong>BP+OSD-0</strong> is run on \(H_Z\) as a standard decoder &mdash; fair, but well-known to be weak on dense overlapping checks. A referee might ask for a <em>tuned</em> BP variant (e.g. Relay-BP), which the paper flags as the right next baseline for harder qLDPC codes in future work.</li>
+  <li><strong>BW-naive</strong>: the paper is admirably explicit that it implements only the <em>naive-weight</em> variant &mdash; hence the label &mdash; and <em>not</em> BW&rsquo;s BP edge-reweighting (which lifts the threshold 3.7%&rarr;4.3%). So &ldquo;beats BW&rdquo; precisely means &ldquo;beats our BW-naive implementation.&rdquo; Weigh this caveat &mdash; though the per-sector advantage over BW-naive is large (up to 13&times;) and widening, so the BP extension is unlikely to close it entirely.</li>
+</ul>
+
+<h3>11.3 What would falsify the headline?</h3>
+<ul>
+  <li>Per-sector LER turning <em>upward</em> at \(L=5\) or beyond (the &ldquo;improves with size&rdquo; trend reversing on a finer sweep).</li>
+  <li>The Gate-0 oracle, computed with a larger radius or syndrome budget, revealing substantial local signal at \(L\ge4\) &mdash; undercutting the &ldquo;non-local&rdquo; mechanism.</li>
+  <li>A tuned BP (Relay-BP) or the full BW-with-reweighting variant matching or beating the learned decoder at any cell.</li>
+  <li>The advantage evaporating outside the tested noise range &mdash; which the paper essentially concedes (see &sect;11.4).</li>
+</ul>
+
+<h3>11.4 The limitations the paper states itself</h3>
+<div class="warn">
+  <span class="label">Honest limitations from &sect;Discussion</span>
+  <ul style="margin-bottom:0;">
+    <li><strong>Bounded operating range in \(p\).</strong> A fine \(L=4\) sweep (3 seeds) shows the per-sector advantage over trivial decaying smoothly with noise: a clear win through \(p=0.05\) (0.110 vs 0.172), narrowing to 0.198 vs 0.227 at \(p=0.07\), 0.267 vs 0.274 at \(p=0.09\), and <strong>closing to a tie by \(p \approx 0.11\)&ndash;0.13</strong>. So the useful range reaches the vicinity of the \(\approx 7.5\%\) optimal fracton-sector threshold (Song et&nbsp;al.). BP+OSD-0 is dominated throughout (per-sector LER 0.42&ndash;0.48). The decoder is not magic at arbitrary noise.</li>
+    <li><strong>Demonstrated only on X-cube.</strong> Transferring the line-aggregation bias to other codes is unproven future work. The sequenced plan: (i) the 3D toric code first (genuinely 3D, head transfers most directly), then (ii) high-rate bivariate-bicycle qLDPC codes (e.g. the gross \([[144,12,12]]\) code) &mdash; but those are 2D, lack lineon/planon structure, and the head would likely need redesign toward quasi-cyclic symmetry; the baseline there is tuned Relay-BP, not vanilla BP+OSD.</li>
+    <li><strong>Not a self-correcting memory.</strong> This establishes <em>existence</em> of a scaling recovery layer &mdash; a candidate active recovery layer for the program &mdash; but a self-correcting memory is a statement about Hamiltonian dynamics and lifetime, not about decoding a code-capacity channel. The paper does not claim otherwise.</li>
+  </ul>
+</div>
+
+<h3>11.5 The statistics, made honest (Appendix A)</h3>
+<p>
+  A note on significance reporting. The paper reports the paired-McNemar comparisons as \(p < 10^{-12}\), <em>not</em> &ldquo;\(p \approx 0\).&rdquo; The \(\chi^2\) statistics are enormous (e.g. \(\sim 48{,}000\) for learned-vs-trivial at \(L=3, p=0.03\)), so the continuity-corrected \(\chi^2\) test &mdash; or an exact binomial test &mdash; gives \(p < 10^{-12}\) in every tabulated paired comparison: an honest, representable bound rather than a claim of exact zero. With \(b \gg c\) in every cell, the win is no coincidence. Appendix&nbsp;A backs this per cell:
+</p>
+<table>
+  <caption>Per-cell block-failure 95% CIs and paired-McNemar discordant counts \((b,c)\) for the learned decoder vs. trivial, BP+OSD-0, and BW-naive (paper Appendix A; <code>data/</code> sections <code>decoder_tables</code>, <code>mcnemar</code>). &mdash; = BW-naive compared by aggregate failure rate, not paired, at \(L\ge8\).</caption>
+  <thead>
+    <tr><th>\(L\)</th><th>\(p\)</th><th>Learned bf [95% CI]</th><th>BW-naive bf [95% CI]</th><th>McNemar \((b,c)\) vs trivial</th><th>McNemar \((b,c)\) vs BP+OSD-0</th><th>McNemar \((b,c)\) vs BW-naive</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>3</td><td>0.03</td><td>0.306 [0.303, 0.308]</td><td>0.391 [0.387, 0.394]</td><td>(53294, 1794)</td><td>(511, 99)</td><td>(12648, 2499)</td></tr>
+    <tr><td>3</td><td>0.05</td><td>0.626 [0.624, 0.628]</td><td>0.703 [0.699, 0.705]</td><td>(33405, 2079)</td><td>(499, 115)</td><td>(12663, 3470)</td></tr>
+    <tr><td>4</td><td>0.03</td><td>0.343 [0.343, 0.344]</td><td>0.682 [0.681, 0.685]</td><td>(69620, 1154)</td><td>(988, 257)</td><td>(43529, 2852)</td></tr>
+    <tr><td>4</td><td>0.05</td><td>0.724 [0.720, 0.728]</td><td>0.937 [0.936, 0.938]</td><td>(31555, 719)</td><td>(859, 146)</td><td>(26963, 1399)</td></tr>
+    <tr><td>6</td><td>0.03</td><td>0.282 [0.272, 0.296]</td><td>0.935 [0.934, 0.936]</td><td>(85691, 31)</td><td>(2067, 218)</td><td>(78726, 369)</td></tr>
+    <tr><td>6</td><td>0.05</td><td>0.800 [0.796, 0.807]</td><td>0.999 [0.999, 0.999]</td><td>(23950, 11)</td><td>(1108, 22)</td><td>(23854, 30)</td></tr>
+    <tr><td>8</td><td>0.03</td><td>0.194 [0.183, 0.210]</td><td>0.993 [0.992, 0.993]</td><td>(72574, 0)</td><td>(4067, 23)</td><td>&mdash;</td></tr>
+    <tr><td>8</td><td>0.05</td><td>0.850 [0.842, 0.856]</td><td>1.000 [1.000, 1.000]</td><td>(13485, 0)</td><td>(905, 0)</td><td>&mdash;</td></tr>
+    <tr><td>10</td><td>0.03</td><td>0.118 [0.108, 0.134]</td><td>1.000 [0.999, 1.000]</td><td>(79351, 0)</td><td>(792, 1)</td><td>&mdash;</td></tr>
+    <tr><td>10</td><td>0.05</td><td>0.863 [0.851, 0.887]</td><td>1.000 [1.000, 1.000]</td><td>(12337, 0)</td><td>(117, 0)</td><td>&mdash;</td></tr>
+  </tbody>
+</table>
+<p class="small">
+  The learned CIs sit entirely below the BW-naive CIs at every cell &mdash; the &ldquo;beats BW-naive on block failure at every cell&rdquo; claim made visible. And the \(c\)-counts vs trivial shrink toward zero as \(L\) grows (1794 at \(L=3,p=0.03\) down to 31 at \(L=6,p=0.03\), and exactly 0 at \(L=8,10\)): at large codes the learned decoder is almost never wrong on a shot where guessing all-zero would have been right.
+</p>
+
+<h3>11.6 Genuinely surprising vs. expected</h3>
+<p>
+  <em>Expected:</em> that a flexible neural net beats vanilla BP+OSD on a code BP is bad at &mdash; that&rsquo;s nearly the point of &sect;5.3. <em>Surprising and load-bearing:</em> (a) the per-sector LER <em>improving</em> with size while everyone else worsens; (b) the global-pool head tying trivial to four decimal places, a clean demonstration that capacity alone is worthless without the right inductive bias; and (c) the Gate-0 oracle showing the local signal essentially gone by \(L=4\) while the net keeps winning, pinning the win on non-local structure. Those three together are what make this more than &ldquo;we trained a CNN and it did okay.&rdquo;
+</p>
+
+<!-- ===================================================== -->
+<h2>12. The conclusion &mdash; now earned</h2>
+<p>
+  Follow the chain back: we wanted a quantum memory; that demanded error correction; correction is defined by the syndrome, which demands a decoder; the standard decoders rely on geometric assumptions (string-joined defect pairs; loop-sparse checks) that the X-cube code violates by its very nature; that nature &mdash; logical information carried on non-local lines &mdash; both defeats the old tools and suggests the new one; a network shaped like those lines is the answer; and the evidence shows it not only wins but <em>scales</em>, for a reason two controls isolate. The one-sentence summary you were not given at the top is now something you can see is true:
+</p>
+<div class="oneliner">
+  The paper builds the <strong>first neural-network decoder for the X-cube fracton code</strong> &mdash; a 3D convolutional network with a line-aggregation head &mdash; and shows that, unlike every standard alternative, its per-logical-qubit error rate <em>improves</em> as the code grows larger, because it exploits the code&rsquo;s non-local line structure that local methods cannot see.
+</div>
+<ol class="takeaway">
+  <li><strong>The problem.</strong> Fracton codes (like X-cube) motivate the self-correcting-memory program, but X-cube has <em>no universally adopted MWPM-like standard decoder</em>: MWPM doesn&rsquo;t apply (no string-joined defects), and generic BP+OSD-0 chokes on the dense, loopy cube checks (convergence ~3% at \(L=6, p=0.05\)).</li>
+  <li><strong>The contribution.</strong> The first <em>neural</em> decoder for X-cube: a weight-shared 3D CNN reading the \(L^3\) cube-syndrome field, plus a code-aware <span style="font-variant:small-caps">AxisLineonHead</span> that aggregates along logical lines and predicts the \(6L-3\) logical-\(Z\) parities &mdash; full coset decoding, not a proxy.</li>
+  <li><strong>It wins everywhere tested.</strong> Across \(L\in\{3,4,6,8,10\}\), \(p\in\{0.03,0.05\}\), 3 seeds, disjoint test splits, it beats trivial, BP+OSD-0, <em>and</em> our code-specific BW-naive implementation on both metrics, with paired McNemar \(p < 10^{-12}\) (per-cell CIs and counts in Appendix A).</li>
+  <li><strong>The headline scaling result.</strong> Per-sector LER at \(p=0.03\) <em>improves</em> with size: \(0.042\to0.035\to0.018\to0.008\to0.003\) for \(L=3,4,6,8,10\) (~9&times; below trivial at \(L=6\), ~24&times; at \(L=8\), ~66&times; at \(L=10\)), while every baseline <em>worsens</em> &mdash; the scaling a useful decoder must show and a fixed local lookup table cannot.</li>
+  <li><strong>The mechanism is isolated.</strong> Ablation: a global-pool head ties trivial <em>exactly</em> (0.7342) while structure-preserving heads win &mdash; capacity isn&rsquo;t enough, the inductive bias is. Oracle: the best radius-1 <em>local</em> rule has ~0 advantage by \(L=4\), yet the net wins &mdash; so the win comes from <em>non-local</em> line/membrane structure.</li>
+  <li><strong>Honest scope.</strong> This demonstrates a scaling recovery layer &mdash; a candidate active recovery layer for the broader self-correcting-memory program, <em>not</em> a self-correcting memory itself. Stated limits: a bounded noise range (advantage closes near the ~7.5% threshold by \(p\approx0.11\)&ndash;0.13) and X-cube-only (transfer to 3D toric / bivariate-bicycle qLDPC is future work).</li>
+</ol>
+
+<!-- ===================================================== -->
+<h2>13. Glossary</h2>
+<dl class="glossary">
+  <dt>\(\mathrm{GF}(2)\) / \(\mathbb{F}_2\) / \(\mathbb{Z}_2\)</dt>
+  <dd>Arithmetic on bits \(\{0,1\}\) where \(+\) is XOR (\(1+1=0\)). All parity-check algebra lives here.</dd>
+
+  <dt>Pauli group / stabilizer</dt>
+  <dd>Tensor products of \(\{I,X,Y,Z\}\) / an abelian subgroup of it (without \(-I\)) whose joint \(+1\)-eigenspace is the codespace. Measuring stabilizers detects errors without disturbing the logical state.</dd>
+
+  <dt>Syndrome \(s = He\)</dt>
+  <dd>The pattern of <em>violated</em> checks (stabilizers reading \(-1\)) caused by error \(e\). The only thing a decoder observes.</dd>
+
+  <dt>CSS code</dt>
+  <dd>A stabilizer code whose checks separate into independent \(X\)-type and \(Z\)-type families, satisfying \(H_X H_Z^\top = 0\).</dd>
+
+  <dt>Logical qubit / operator</dt>
+  <dd>The protected information (\(k\) of them) / a Pauli that changes it while commuting with all stabilizers. \(k = N - \mathrm{rank}\,H_X - \mathrm{rank}\,H_Z\).</dd>
+
+  <dt>Logical coset / sector</dt>
+  <dd>The equivalence class (mod stabilizers) an error belongs to. Decoding = identifying the right coset; the X-cube task predicts \(6L-3\) coset (parity) bits.</dd>
+
+  <dt>Code distance \(d\) / rate \(k/N\)</dt>
+  <dd>Weight of the smallest undetectable, data-corrupting operator (bigger = more robust) / fraction of qubits that are logical.</dd>
+
+  <dt>Decoder</dt>
+  <dd>The map from syndrome to correction. The subject of this paper.</dd>
+
+  <dt>Code-capacity channel</dt>
+  <dd>The simplest noise model: i.i.d. qubit \(X\)-flips at rate \(p\), measured perfectly once. No measurement or circuit-level noise.</dd>
+
+  <dt>MWPM</dt>
+  <dd>Minimum-Weight Perfect Matching: pairs up syndrome defects with cheapest connecting strings. The surface-code workhorse; <em>inapplicable</em> to X-cube because excitations have no connecting string.</dd>
+
+  <dt>Belief propagation (BP)</dt>
+  <dd>Iterative message passing on the Tanner graph to estimate which qubits flipped. Reliable on sparse/tree-like graphs; degrades on dense, loopy ones (like X-cube cube checks).</dd>
+
+  <dt>BP+OSD-0</dt>
+  <dd>BP followed by order-0 ordered-statistics post-processing; the general-purpose qLDPC baseline. Here its BP convergence collapses (~0.8 at \(L=3\) to ~0.03 at \(L=6, p=0.05\)). &ldquo;BP+OSD&rdquo; unqualified refers to the general method.</dd>
+
+  <dt>BW-naive (Brown&ndash;Williamson, naive-weight)</dt>
+  <dd>The code-specific fracton baseline reducing X-cube decoding to 2D matching. The strongest baseline implemented; <em>only</em> the naive-weight cube-defect/planeon matching variant &mdash; hence &ldquo;BW-naive&rdquo; &mdash; without BW&rsquo;s BP edge-reweighting (which would lift the threshold 3.7%&rarr;4.3%). All &ldquo;beats BW&rdquo; claims are against this implementation.</dd>
+
+  <dt>Fracton order</dt>
+  <dd>A phase of matter with excitations of restricted mobility. Supplies nonlocal conservation laws and a growing logical <em>count</em> (\(k=6L-3\)); a growing energy barrier / self-correction is conjectural motivation, not established here.</dd>
+
+  <dt>Fracton / lineon / planon</dt>
+  <dd>Excitations that move not at all / only along a line / only within a plane. The X-cube decoder&rsquo;s head is built to read this line/plane structure.</dd>
+
+  <dt>X-cube code</dt>
+  <dd>A \(\mathbb{Z}_2\) fracton stabilizer code on the \(3L^3\) edges of an \(L^3\) cubic lattice; cube (\(Z\)) checks give an \(L^3\) syndrome field; stores \(6L-3\) logical qubits.</dd>
+
+  <dt>Block failure / per-sector LER</dt>
+  <dd>Fraction of shots with <em>any</em> of the \(6L-3\) sectors wrong (all-or-nothing, basis-invariant) / mean fraction of individual sectors wrong (per-logical-qubit, basis-relative; where the scaling improvement shows).</dd>
+
+  <dt>Weight sharing</dt>
+  <dd>Reusing the same convolutional filters across the whole lattice; gives translation equivariance and \(L\)-independent parameter count.</dd>
+
+  <dt><span style="font-variant:small-caps">AxisLineonHead</span></dt>
+  <dd>The paper&rsquo;s code-aware head: collapse (mean+max) features along each logical-line axis, apply a 2D transverse convolution, gather into \(6L-3\) logits.</dd>
+
+  <dt>Gate-0 / signal-existence oracle</dt>
+  <dd>A held-out radius-1 local-pattern ML lookup; its advantage over trivial empirically estimates the locally-available signal (an indicative control, not a formal bound over all local decoders). Largely collapsed by \(L=4\) &mdash; the control showing the learned win is non-local.</dd>
+
+  <dt>McNemar&rsquo;s test</dt>
+  <dd>Paired significance test on identical shots: count \(b\) (learned right, baseline wrong) and \(c\) (the reverse). \(b \gg c\) with \(p < 10^{-12}\) = a real win; per-cell \((b,c)\) and CIs in Appendix A.</dd>
+
+  <dt>Threshold</dt>
+  <dd>The noise rate below which more error correction helps. Optimal X-cube fracton-sector threshold under \(X\)-noise is \(\approx 7.5\%\) (Song et&nbsp;al.); BW&rsquo;s matching variant is \(\approx 3.7\%\) (4.3% with BP reweighting).</dd>
+</dl>
+
+<hr>
+<p class="small">
+  Tutorial generated as a companion to <code>main.tex</code> in this directory. All numerical values are taken verbatim from the paper&rsquo;s Table 1, Table 2, and the JSON outputs in <code>data/</code> (<code>xcube_L346_gen.json</code>, <code>xcube_L810_gen.json</code>, <code>xcube_L4_psweep.json</code>) per <code>REPRODUCIBILITY.md</code>. No results were invented.
+</p>
+
+</div>
+</body>
+</html>

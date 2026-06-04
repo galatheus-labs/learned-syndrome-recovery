@@ -3,8 +3,8 @@
 Aggregates per-run test-set JSONs produced by `eval_test_split.py` and emits
 the paper tables. Every run is produced by a single command:
 
-    python eval_test_split.py \\
-        --ckpt-dir /work/qec_runs/d{D}_s{S}_w{W}_dep{DEP}{_suffix}/ckpts \\
+    python src/eval_test_split.py \\
+        --ckpt-dir /path/to/qec_run/ckpts \\
         --distance D --seed S --out test_d{D}_s{S}_w{W}_dep{DEP}{_suffix}.json
 
 This reproducer walks a directory of those JSONs, groups by
@@ -23,11 +23,12 @@ transcribe from training logs; always re-derive via reproduce_qec_results.
 
 Usage:
 
-    # After running eval_test_split.py per (d, seed, block_type) cell:
-    python reproduce_qec_results.py --results-dir test_results/ --out qec_paper.json
+    # Release artifact aggregation:
+    python reproduce_qec_results.py --results-dir data/qec_clean_knee_multiseed_json \\
+        --distances 3,5,7,9,11 --seeds 42,43,44 --out /tmp/qec_reproduction.json
 
     # Subset of cells (e.g. only runs that have finished):
-    python reproduce_qec_results.py --results-dir test_results/ \\
+    python reproduce_qec_results.py --results-dir data/qec_clean_knee_multiseed_json \\
         --distances 3,5,7,9 --seeds 42,43,44
 """
 

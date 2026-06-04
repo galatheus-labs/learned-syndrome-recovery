@@ -19,6 +19,13 @@ using an inductive bias matched to the constraint geometry.
 - `papers/fracton.pdf` tests a structure-aware neural decoder on the X-cube
   fracton code.
 
+## Tutorials and Examples
+
+- `papers/tutorials/`: browser-readable walkthroughs for the four papers.
+- `papers/examples/`: small worked examples used to explain the fracton/X-cube
+  setting.
+- `papers/figures/`: selected publication figures and figure source outputs.
+
 ## Code Layout
 
 - `fracton_xcube/`: X-cube decoder experiments and the axial-parity gauge
@@ -27,12 +34,13 @@ using an inductive bias matched to the constraint geometry.
   evaluation code.
 - `voxel_compression/`: 3D occupancy-grid syndrome reconstruction experiments.
 
-Each module includes its own reproducibility notes and checked-in result JSONs.
-The top-level `REPRODUCIBILITY.md` gives the release-wide command map.
+Each module includes a compact reproducibility guide and checked-in result
+JSONs. The top-level `REPRODUCIBILITY.md` gives the release-wide command map.
 
 ## Status
 
 This repository is initially private while the paper family is finalized. The
-intended public release is source code, preprint PDFs, result JSONs, and exact
-commands. Large trained checkpoints and external datasets are not committed;
-module reproducibility docs identify where those artifacts are expected.
+intended public release is source code, preprint PDFs, tutorials, selected
+figures, result JSONs, and exact commands. Large trained checkpoints and
+external datasets are not committed; module reproducibility docs identify where
+those artifacts are expected.

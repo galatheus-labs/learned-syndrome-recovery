@@ -4,23 +4,23 @@ Loads pre-computed data from qec_prep_data.py and trains with
 PyTorch DDP across multiple GPUs connected via NCCL.
 
 Architecture:
-    CPU nodes (tinkara/milan): run qec_prep_data.py → /work/qec_data/
-    GPU nodes (alpha/cpm):     run this script with torchrun
+    CPU nodes: run qec_prep_data.py into a local or mounted data directory.
+    GPU nodes: run this script with torchrun.
 
 Usage (single node, for testing):
     torchrun --nproc_per_node=1 qec_train_ddp.py \
-        --data-dir /work/qec_data/d9_aug --width 192 --depth 12
+        --data-dir runs/qec_data/d9_aug --width 192 --depth 12
 
 Usage (2 nodes over 100G):
     # On alpha (rank 0):
     torchrun --nnodes=2 --node_rank=0 --nproc_per_node=1 \
         --master_addr=192.168.68.232 --master_port=29500 \
-        qec_train_ddp.py --data-dir /work/qec_data/d9_aug
+        qec_train_ddp.py --data-dir runs/qec_data/d9_aug
 
     # On cpm (rank 1):
     torchrun --nnodes=2 --node_rank=1 --nproc_per_node=1 \
         --master_addr=192.168.68.232 --master_port=29500 \
-        qec_train_ddp.py --data-dir /work/qec_data/d9_aug
+        qec_train_ddp.py --data-dir runs/qec_data/d9_aug
 """
 
 import argparse

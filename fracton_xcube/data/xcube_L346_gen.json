@@ -32,7 +32,7 @@
       "coordconv"
     ],
     "device": "cuda",
-    "out": "/work/fracton_runs/xcube_L346_gen_bw.json",
+    "out": "data/xcube_L346_gen.json",
     "smoke": false
   },
   "sections": {

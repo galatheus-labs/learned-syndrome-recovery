@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tutorial: Constraint Locality in Learned Syndrome Decoding for 3D Occupancy Grids</title>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+<style>
+  :root {
+    --ink: #1c1e21;
+    --muted: #5b6168;
+    --accent: #1f5fa8;
+    --accent-soft: #eef4fb;
+    --warn-bg: #fdf6ec;
+    --warn-border: #e0b66a;
+    --good-bg: #eef7ef;
+    --good-border: #79b585;
+    --rule: #e2e5e9;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.68;
+    font-size: 17px;
+    margin: 0;
+    background: #fbfbfc;
+  }
+  .wrap {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 48px 28px 96px;
+  }
+  h1 {
+    font-size: 2.0rem;
+    line-height: 1.2;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 1.02rem;
+    margin: 0 0 8px;
+  }
+  .byline {
+    color: var(--muted);
+    font-size: 0.92rem;
+    margin: 0 0 32px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--rule);
+  }
+  h2 {
+    font-size: 1.5rem;
+    margin: 52px 0 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--rule);
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 1.16rem;
+    margin: 30px 0 8px;
+    color: #2a2d31;
+  }
+  p { margin: 12px 0; }
+  ul, ol { margin: 12px 0; padding-left: 26px; }
+  li { margin: 6px 0; }
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #f0f1f3;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  strong { color: #111; }
+  a { color: var(--accent); }
+
+  .lead {
+    font-size: 1.12rem;
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 18px 0;
+  }
+  .aside {
+    background: #f6f7f9;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    font-size: 0.97rem;
+  }
+  .aside .tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .warn {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    font-size: 0.97rem;
+  }
+  .good {
+    background: var(--good-bg);
+    border: 1px solid var(--good-border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    font-size: 0.97rem;
+  }
+  .analogy {
+    border: 1px dashed #b9c2cc;
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin: 18px 0;
+    background: #fcfdff;
+    font-size: 0.97rem;
+  }
+  .analogy .tag, .warn .tag, .good .tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .analogy .tag { color: #6a7480; }
+  .warn .tag { color: #b07b1e; }
+  .good .tag { color: #3e8a52; }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 20px 0;
+    font-size: 0.92rem;
+  }
+  caption {
+    caption-side: top;
+    text-align: left;
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin-bottom: 8px;
+    font-style: italic;
+  }
+  th, td {
+    border: 1px solid var(--rule);
+    padding: 8px 12px;
+    text-align: left;
+  }
+  th {
+    background: #f2f4f7;
+    font-weight: 600;
+  }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  .hl { background: #fff6d9 !important; font-weight: 600; }
+
+  .glossary dt {
+    font-weight: 700;
+    margin-top: 14px;
+    color: #14181d;
+  }
+  .glossary dd {
+    margin: 2px 0 0 0;
+    color: #33373c;
+  }
+  .toc {
+    background: #f6f7f9;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 14px 22px;
+    margin: 24px 0;
+    font-size: 0.95rem;
+  }
+  .toc ol { margin: 4px 0; }
+  .footer-note {
+    margin-top: 56px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 0.86rem;
+  }
+  .pos { color: #2f8a4a; font-weight: 600; }
+  .neg { color: #c0392b; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Constraint Locality in Learned Syndrome Decoding for 3D Occupancy Grids</h1>
+<p class="subtitle">A guided tutorial for verifying you understand the paper you wrote.</p>
+<p class="byline">Companion to Guarraci, <em>Constraint Locality in Learned Syndrome Decoding for 3D Occupancy Grids</em> (Galatheus, May 2026). Every number below is pulled from the paper's tables and the reproducer artifacts in <code>data/clean-v2-may02-rsfix/</code> and <code>data/clean-v2-may02-strata/</code>.</p>
+
+<div class="toc">
+<strong>What this covers</strong>
+<ol>
+  <li>In one sentence + why it matters</li>
+  <li>Background you need (from first principles)</li>
+  <li>What the paper actually does</li>
+  <li>The results, explained</li>
+  <li>How to read it like a skeptical reviewer</li>
+  <li>Glossary</li>
+  <li>Key takeaways</li>
+</ol>
+</div>
+
+<!-- ============================================================ -->
+<h2>1. In one sentence</h2>
+
+<p class="lead">When a strong neural network has already guessed what a 3D shape looks like, forcing that guess to <em>exactly</em> satisfy a set of big, global parity equations makes it <strong>worse</strong>, but gently nudging it to agree with many small, overlapping <em>local</em> parity checks placed on the object's surface makes it <strong>better</strong> — and a short theory of "check weight" explains why.</p>
+
+<h3>Why it matters</h3>
+<p>There's a tempting idea in compression and coding: you have a learned model that <em>almost</em> reconstructs the data, and you also have some exact algebraic constraints (parity checks) the true data must satisfy. Surely <em>enforcing the constraints</em> can only help — it pins the answer to the set of valid solutions, right?</p>
+
+<p>This paper shows that intuition is <strong>backwards</strong> in the regime that actually matters (a good learned proposal that is already 90%+ correct). Hard-enforcing high-weight algebraic constraints throws away most of what the network got right. The fix is not "more constraints" or "better algebra" — it's <strong>constraint geometry</strong>: checks must be local, overlapping, and aimed at the uncertain parts of the prediction. The paper is careful to frame this as a <em>design principle / diagnosis</em>, not a finished compression codec.</p>
+
+<div class="aside">
+<span class="tag">Scope check (the paper says so explicitly)</span>
+The abstract and discussion state plainly: this is "the experimental isolation of when algebraic constraints help or hurt learned reconstruction," <em>not</em> "a complete production codec or state-of-the-art compression system." Hold that framing in mind for the whole tutorial — it changes which claims you should scrutinize.
+</div>
+
+<!-- ============================================================ -->
+<h2>2. Background you need</h2>
+
+<p>You do not need a coding-theory background to follow the paper. Below is every prerequisite concept built up from scratch, in roughly the order the paper uses them.</p>
+
+<h3>2.1 Bits, vectors, and GF(2) (parity arithmetic)</h3>
+<p>A binary vector is just a list of 0s and 1s, written $\mathbf{x}\in\{0,1\}^N$. Here each entry is one <strong>voxel</strong> (a 3D pixel): 1 = "occupied," 0 = "empty." The grid is $32\times32\times32$, so $N = 32^3 = 32{,}768$ voxels.</p>
+
+<p><strong>GF(2)</strong> ("Galois Field of 2 elements," also written $\mathbb{F}_2$) is arithmetic where the only numbers are 0 and 1 and addition wraps around: $1+1=0$. This is exactly the logical XOR / "parity" operation. A <strong>parity check</strong> asks: "of this chosen set of bits, is the number of 1s even or odd?" That single yes/no answer is one parity bit.</p>
+
+<div class="analogy">
+<span class="tag">Analogy</span>
+A parity check is the bouncer counting hands raised in a group. He doesn't learn <em>who</em> raised a hand — only whether the count is even or odd. If you tell him "the true count was even" but he sees odd, he knows <em>someone</em> in the group is wrong, but not which person. That ambiguity is the whole story of this paper.
+</div>
+
+<h3>2.2 Parity-check matrix, syndrome, and the underdetermined problem</h3>
+<p>Stack $M$ parity checks into a matrix $\mathbf{H}\in\{0,1\}^{M\times N}$. Each <em>row</em> is one check; the 1s in that row mark which voxels it sums. Applying all checks to the data gives the <strong>syndrome</strong>:</p>
+$$\mathbf{s} = \mathbf{H}\mathbf{x} \bmod 2 \;\in\; \{0,1\}^M.$$
+<p>The syndrome is a short fingerprint of the data: $M$ parity bits summarizing $N$ voxels.</p>
+
+<p>The decoder's job is the reverse: given $\mathbf{s}$, recover $\mathbf{x}$. Here is the crux. In this paper $M = 2{,}977$ checks but $N = 32{,}768$ voxels — far fewer equations than unknowns. The system is <strong>underdetermined</strong>. The set of vectors consistent with a given syndrome is called a <strong>coset</strong>, and its size is astronomically large:</p>
+$$2^{\,N - \operatorname{rank}(\mathbf{H})} \;=\; 2^{\,32768 - 2977} \;=\; 2^{\,29791}.$$
+
+<div class="aside">
+<span class="tag">Intuition: how big is $2^{29791}$?</span>
+For comparison, there are about $2^{266}$ atoms in the observable universe. The syndrome eliminates only $2{,}977$ bits of uncertainty out of $32{,}768$. So the syndrome <strong>cannot</strong> identify the shape on its own. Whatever recovers the shape, it is mostly <em>not</em> the algebra. This is why the paper keeps insisting "the learned proposal does most of the work."
+</div>
+
+<h3>2.3 Where the extra information comes from: side information and a learned proposal</h3>
+<p>Since the syndrome alone is hopeless, the decoder needs extra information to pick one member of the gigantic coset. The paper supplies two things:</p>
+<ul>
+  <li><strong>Spectral side-information $\mathbf{c}$:</strong> a handful of low-frequency transform coefficients (think of a blurry, low-resolution sketch of the shape — like the first few terms of a JPEG-style frequency decomposition). Sending these is cheap and gives a rough sense of where the object is.</li>
+  <li><strong>A learned spatial proposal:</strong> a neural network, trained on lots of real 3D objects (ShapeNet), that looks at the blurry sketch plus syndrome-derived features and outputs a confident guess for every voxel: $P_\theta(x_i=1\mid \mathbf{c},\mathbf{s})$.</li>
+</ul>
+
+<p>This is the part that makes the problem learnable. The network has seen thousands of chairs, tables, and lamps, so given a blurry sketch it knows what a plausible sharp shape looks like. Its raw proposal is already very good (we will see IoU $\approx 0.94$). The research question is what to do <em>after</em> that.</p>
+
+<div class="analogy">
+<span class="tag">Analogy</span>
+This is the "decoder side information" setting of Slepian–Wolf / Wyner–Ziv source coding (cited in the paper): the encoder can send a tiny fingerprint because the decoder already has a strong correlated guess. Like texting a friend "meet at the usual place" — the message is short only because the friend already shares the context.
+</div>
+
+<h3>2.4 IoU: how "right" a reconstruction is</h3>
+<p><strong>Intersection over Union (IoU)</strong> measures overlap between the predicted occupied voxels and the true occupied voxels:</p>
+$$\mathrm{IoU} = \frac{|\text{predicted-on} \cap \text{true-on}|}{|\text{predicted-on} \cup \text{true-on}|}.$$
+<p>IoU = 1.0 is perfect; 0 means no overlap at all. Crucially, IoU <strong>ignores the empty background</strong>: it only counts occupied voxels. That matters because these grids are mostly empty (mean fill rate ~8%), so a metric like raw voxel accuracy would be flattered by getting the easy zeros right. The paper uses IoU precisely so that improvements reflect getting the actual <em>shape surface</em> right.</p>
+
+<h3>2.5 Belief propagation (BP) and the Tanner graph</h3>
+<p>Instead of <em>hard</em> enforcing checks, you can do a soft, iterative negotiation. Picture a <strong>Tanner graph</strong>: two columns of nodes. On one side, <em>variable nodes</em> (one per voxel), each holding a "belief" — a soft probability of being on or off, initialized from the network's confidence. On the other side, <em>check nodes</em> (one per parity equation), each holding the known syndrome value (even/odd).</p>
+
+<p>An edge connects a check to each voxel it sums. <strong>Belief propagation</strong> passes messages back and forth: each check tells its voxels "given everyone else and my required parity, here's what I think you should be," and each voxel combines incoming opinions with its own network confidence. After a few rounds (the code uses ~30 iterations with damping) the beliefs settle. Voxels the network was confident about barely move; uncertain voxels get pulled toward whatever makes the local checks consistent.</p>
+
+<div class="analogy">
+<span class="tag">Analogy</span>
+BP is a group of neighbors comparing notes. Each parity check is a small committee that knows only its own headcount-parity. If most members of a committee are confident, the committee can usually deduce the one uncertain member. If <em>everyone</em> in a committee is uncertain, the committee is stuck. That is exactly why <em>small, overlapping</em> committees work and <em>one giant committee</em> (a high-weight global check) does not.
+</div>
+
+<h3>2.6 Check weight, and the three decoding operations</h3>
+<p>The <strong>weight</strong> $w$ of a check is how many voxels it sums (the number of 1s in that row of $\mathbf{H}$). A weight-2 check sums two voxels; a weight-1024 "global" check sums a thousand. Weight is the single most important quantity in this paper.</p>
+
+<p>The paper contrasts three ways to combine the learned proposal with the syndrome:</p>
+<ul>
+  <li><strong>(A) Hard algebraic projection.</strong> Take the network's guess $\tilde{\mathbf{x}}$, find where it violates the syndrome (residual $\mathbf{r}=\mathbf{s}-\mathbf{H}\tilde{\mathbf{x}}$ over GF(2)), and apply the smallest algebraic correction $\hat{\mathbf{x}}=\tilde{\mathbf{x}}+\mathbf{L}\mathbf{r}$ (with $\mathbf{H}\mathbf{L}=\mathbf{I}$) that makes the syndrome <em>exactly</em> satisfied. "Smallest" here means minimum-Hamming-weight (fewest bits flipped) — chosen by algebraic convenience, not by what looks like a real shape.</li>
+  <li><strong>(B) Learned proposal only.</strong> Just trust the network; don't touch the syndrome at inference. Output may slightly violate the syndrome.</li>
+  <li><strong>(C) Proposal + local BP refinement.</strong> Use the network's soft output as the variable beliefs, then run BP on a Tanner graph of well-chosen <em>local</em> checks to nudge it.</li>
+</ul>
+<p>The paper's one-line summary: <strong>(A) hurts, (B) is strong, and (C) beats (B) only when the checks have the right (local, overlapping, surface-targeted) structure.</strong></p>
+
+<!-- ============================================================ -->
+<h2>3. What the paper actually does</h2>
+
+<h3>3.1 The setup</h3>
+<p>The data is $32^3$ binary occupancy grids of ShapeNet objects. A flat 3D residual network (ResNet-style, width 192, depth 12, ~25M params, no downsampling) takes a canonical base solution + the low-frequency spectral field + a coarse occupancy map, conditioned on the syndrome, and predicts a per-voxel occupancy logit. All headline numbers are averaged over <strong>three training seeds (42/43/44)</strong>, evaluated on <strong>200 ShapeNet validation samples</strong>, reported as mean ± SEM.</p>
+
+<div class="aside">
+<span class="tag">A detail worth noticing</span>
+The paper reports that a tiny width-48, depth-8 model (~1.68M params) reaches comparable IoU to the 25M-param model at $32^3$. The conclusion drawn: the proposal network is heavily over-parameterized at this resolution, so <em>model capacity is not the bottleneck — constraint design is.</em> This is offered only as a qualitative observation; the multi-seed tables all use the width-192 model.
+</div>
+
+<h3>3.2 The diagnosis experiment (does hard projection help?)</h3>
+<p>Run the network (operation B), measure its IoU, then apply hard projection (operation A) and re-measure. Also track: how many checks were violated before projection, how many bits the projection flipped, and — the key diagnostic — what fraction of those flips moved <em>toward</em> the ground truth ("helpful flips").</p>
+
+<h3>3.3 The constraint-locality experiment (which checks help?)</h3>
+<p>Hold the learned proposal fixed and swap the post-processing. Compare hard projection (global, high-weight checks) against BP refinement using three families of <em>local</em> surface checks of decreasing weight: $2^3$ patches (weight 8), gradient runs (weight 4), and neighbor pairs (weight 2). All three local families are <em>overlapping</em> (adjacent checks share voxels) and <em>surface-targeted</em> (placed where the proposal is uncertain, at object boundaries).</p>
+
+<h3>3.4 The content-adaptive trick</h3>
+<p>Where do you put the surface checks? You could signal their locations, but that costs bits. The paper's trick: <strong>both encoder and decoder run the same surface detection on the same shared spectral side-information</strong>. They independently arrive at the same surface voxels, so the check <em>locations</em> require <em>zero extra signaling bits</em>. (The check <em>values</em> — the local syndrome — still cost bits, which is why those bits are reported as a separate diagnostic column, not folded into the rate–distortion curve.)</p>
+
+<h3>3.5 The theory (why weight controls usefulness)</h3>
+<p>Suppose each voxel in the proposal is independently correct with probability $p\in(\tfrac12,1)$. For a single weight-$w$ check, the probability it contains <em>exactly one</em> error is</p>
+$$P_1(w,p) = w\,(1-p)\,p^{\,w-1}.$$
+<p>This is the <strong>single-error-informative</strong> regime: if a check has exactly one wrong voxel inside it, and you can identify which voxel (via the prior or overlapping checks), the syndrome tells you exactly how to fix it. The function $P_1$ is maximized at</p>
+$$w^* = -\frac{1}{\ln p},$$
+<p>and decays exponentially for $w \gg w^*$. <strong>Worked example from the paper</strong> (for $p=0.88$): $w^*\approx 8$, $P_1(4)=0.33$, but $P_1(64)=5\times10^{-4}$. With 32 checks, weight-4 local checks give ~10.6 single-error-informative checks; weight-64 global checks give ~0.016 — essentially none.</p>
+
+<div class="aside">
+<span class="tag">Why the optimum is small</span>
+There's a tension. A bigger check covers more voxels, so it's more likely to catch <em>at least one</em> error — but it's also more likely to catch <em>two or more</em>, and with multiple errors the parity bit can't tell you which voxels are wrong (two flips can cancel, leaving the parity looking fine). The sweet spot $w^* = -1/\ln p$ balances "big enough to usually contain an error" against "small enough that it's usually just one." For high-accuracy proposals ($p$ near 1), $w^*$ is small — exactly the local-check regime.
+</div>
+
+<p>The second theorem makes the negative case precise. If your correction policy is allowed to use <em>only the residual</em> (i.e., "a check is violated, flip something in it") with no external prior, then for any weight $w\ge 3$ and $p>\tfrac12$ the <em>expected</em> number of errors goes <strong>up</strong>, not down:</p>
+$$\mathbb{E}[\Delta\mathrm{err}\mid r\neq 0] = \frac{1}{Z}\sum_{\substack{k=1\\k\text{ odd}}}^{w}\binom{w}{k}(1-p)^k p^{\,w-k}\,\frac{w-2k}{w},$$
+<p>which is strictly positive for $w\ge3$, with leading order $(w-2)/w$ as $p\to1$. The intuition: a violated weight-$w$ check almost always has exactly one error (mass concentrates at $k=1$ when $p$ is high), and a <em>blind</em> flip lands on the one wrong voxel only $1/w$ of the time — so $w-1$ times out of $w$ you break a correct voxel. <strong>Corollary (a prior is necessary):</strong> no residual-only policy can do better than this, because the residual is blind to <em>which</em> voxel is wrong. You need an external information source — the learned proposal, or overlapping local checks — to break the tie.</p>
+
+<div class="warn">
+<span class="tag">Honesty note the paper makes itself</span>
+The paper explicitly says Theorem 2 <em>replaces an earlier, false deterministic claim</em> that "every multi-error correction is harmful." That's false because two errors inside a check can cancel, so a flip can occasionally reduce the count. The corrected, probabilistic statement is about <em>expectation</em>, and only that weaker claim is defended. This is exactly the kind of self-correction a careful reviewer wants to see survive in the final draft.
+</div>
+
+<!-- ============================================================ -->
+<h2>4. The results, explained</h2>
+
+<h3>4.1 The main finding: hard projection backfires</h3>
+
+<table>
+<caption>Table 1 (paper): Clean hard algebraic projection diagnosis. 200 ShapeNet validation samples, spectral level 4, mean ± SEM over seeds 42/43/44.</caption>
+<thead>
+<tr><th>Metric</th><th class="num">Value</th></tr>
+</thead>
+<tbody>
+<tr><td>Constraint violations before projection</td><td class="num">47.6 ± 4.5 / 2,977 (1.6%)</td></tr>
+<tr><td>Bits flipped by projection</td><td class="num">52.5 ± 5.2 / 32,768 (0.16%)</td></tr>
+<tr><td>IoU before projection</td><td class="num">0.9370 ± 0.0028</td></tr>
+<tr class="hl"><td>IoU after projection</td><td class="num">0.8782 ± 0.0085 (−0.0588 ± 0.0058)</td></tr>
+<tr><td>Mean |logit| of flipped bits</td><td class="num">8.665 ± 0.020</td></tr>
+<tr><td>Mean |logit| of kept bits</td><td class="num">14.151 ± 0.016</td></tr>
+<tr class="hl"><td>Fraction of <em>helpful</em> flips</td><td class="num">5.3% ± 0.5%</td></tr>
+</tbody>
+</table>
+
+<p><strong>How to read this.</strong> The proposal already satisfies 98.4% of the checks; only 47.6 of 2,977 are violated. Projection flips a tiny number of bits (52.5, or 0.16% of the grid) to fix those violations. Yet IoU <em>drops</em> by about 0.059 — and the smoking gun is the last row: only <span class="neg">5.3%</span> of the flips moved toward the truth, so <strong>94.7% moved away</strong>. The projection also tends to flip <em>lower-confidence</em> bits (|logit| 8.7 vs 14.2 for kept bits), which sounds reasonable — but it's still wrong 95% of the time, because algebraic minimality has nothing to do with where the real shape is.</p>
+
+<p><strong>Why it happens (and why it's <em>not</em> surprising once you see it):</strong> the global checks operate at the scale of full rows (32 voxels), while real reconstruction errors live on object surfaces (2–8 voxels). The right-inverse finds the minimum-Hamming-weight way to satisfy the syndrome — a quantity with no relationship to spatial coherence. This is a concrete instance of Theorem 2's "residual-only correction increases expected error."</p>
+
+<h3>4.2 The flip: local overlapping checks help</h3>
+
+<table>
+<caption>Table 2 (paper): Same learned proposal (IoU 0.9370 ± 0.0028), different post-processing. 200 samples, level 4, seeds 42/43/44. "Extra bits" are local syndrome values beyond the fixed payload — a constraint-design ablation, not a rate-matched codec comparison.</caption>
+<thead>
+<tr><th>Post-processing</th><th class="num">Weight</th><th>Overlap</th><th class="num">Extra bits</th><th class="num">ΔIoU</th></tr>
+</thead>
+<tbody>
+<tr><td>None (proposal only)</td><td class="num">—</td><td>—</td><td class="num">0</td><td class="num">baseline (0.9370)</td></tr>
+<tr class="hl"><td>Hard projection (global)</td><td class="num">32–1024</td><td>low</td><td class="num">0</td><td class="num neg">−0.0588 ± 0.0058</td></tr>
+<tr><td>Surface patches ($2^3$)</td><td class="num">8</td><td>yes</td><td class="num">4,205</td><td class="num pos">+0.0363 ± 0.0026</td></tr>
+<tr><td>Surface gradient runs</td><td class="num">4</td><td>yes</td><td class="num">12,682</td><td class="num pos">+0.0603 ± 0.0031</td></tr>
+<tr><td>Surface neighbor pairs</td><td class="num">2</td><td>yes</td><td class="num">12,806</td><td class="num pos">+0.0623 ± 0.0028</td></tr>
+</tbody>
+</table>
+
+<p><strong>The contrast is the whole paper.</strong> Same proposal, same data. Global high-weight projection: <span class="neg">−0.059</span>. Local low-weight overlapping BP: <span class="pos">+0.036 to +0.062</span>. And there's a clean monotone trend — <em>lower weight helps more</em> (weight 2 &gt; weight 4 &gt; weight 8), exactly as the $P_1(w,p)$ theory predicts, since smaller checks live closer to the single-error-informative sweet spot for a high-accuracy proposal.</p>
+
+<div class="warn">
+<span class="tag">Read the "Extra bits" column carefully</span>
+The lower-weight winners also cost more extra syndrome bits (12,800 for weight-2 vs 4,205 for weight-8 patches). So weight-2 is not a free lunch — it buys its bigger ΔIoU with ~3× the side-information. This is why the paper labels these "extra diagnostic bits," keeps them <em>out</em> of the rate–distortion curve, and frames the table as a <em>constraint-design ablation</em>, not a rate-matched codec comparison. A reviewer should not read "+0.062" as "free improvement."
+</div>
+
+<h3>4.3 The rate–distortion diagnostic (more sketch ⇒ better reconstruction)</h3>
+
+<table>
+<caption>Table 3 (paper): Nominal rate–distortion on 200 validation samples, seeds 42/43/44. Bits = 2,977 syndrome + 8 coarse + 8 per retained low-frequency spectral coefficient. Post-hard-projection IoU, before surface-BP. No entropy-coded bitstream is implemented.</caption>
+<thead>
+<tr><th>Spectral level</th><th class="num">Bits</th><th class="num">Mean IoU</th></tr>
+</thead>
+<tbody>
+<tr><td>L2</td><td class="num">3,201</td><td class="num">0.6947 ± 0.0072</td></tr>
+<tr><td>L3</td><td class="num">3,985</td><td class="num">0.7941 ± 0.0081</td></tr>
+<tr class="hl"><td>L4</td><td class="num">5,729</td><td class="num">0.8781 ± 0.0085</td></tr>
+<tr><td>L5</td><td class="num">8,817</td><td class="num">0.9380 ± 0.0072</td></tr>
+<tr><td>L6</td><td class="num">13,633</td><td class="num">0.9729 ± 0.0036</td></tr>
+<tr><td>L7</td><td class="num">20,561</td><td class="num">0.9908 ± 0.0017</td></tr>
+<tr><td>L8</td><td class="num">29,985</td><td class="num">0.9970 ± 0.0006</td></tr>
+</tbody>
+</table>
+
+<p>This is the expected, "sanity-check" curve: give the proposal more of the low-frequency sketch and reconstruction improves smoothly from IoU 0.69 to 0.997. The L4 row (0.8781) is the post-projection number that matches Table 1's "after projection" entry — the same setting. The paper is upfront that this is a <em>nominal bandwidth diagnostic</em> with an 8-bit-per-coefficient accounting model, <strong>not</strong> a serialized/quantized/entropy-coded codec. Don't read it as a competitive compression result.</p>
+
+<div class="aside">
+<span class="tag">Watch the two different L4 IoUs</span>
+You will see both 0.9370 and 0.8781 attached to "L4." They are not a contradiction: <strong>0.9370</strong> is the raw learned proposal (operation B, the baseline in Table 2), and <strong>0.8781</strong> is that same proposal <em>after</em> hard projection (the damaged version, Table 3 and the "after" row of Table 1). Tracking which one a sentence refers to is the single easiest way to misread the paper — and a good self-test that you understand it.
+</div>
+
+<h3>4.4 Density stratification (the effect isn't a background artifact)</h3>
+
+<table>
+<caption>Table 4 (paper): Level-4 results split by occupancy rank quartile. 50 validation objects per stratum per seed; mean ± SEM over seeds 42/43/44.</caption>
+<thead>
+<tr><th>Stratum</th><th>Occupancy</th><th class="num">Raw IoU</th><th class="num">Hard Δ</th><th class="num">Patch Δ</th><th class="num">Neighbor Δ</th></tr>
+</thead>
+<tbody>
+<tr><td>Q1</td><td>0.62–1.68%</td><td class="num">0.946 ± 0.003</td><td class="num neg">−0.059</td><td class="num pos">+0.035</td><td class="num pos">+0.053</td></tr>
+<tr><td>Q2</td><td>1.68–1.92%</td><td class="num">0.947 ± 0.003</td><td class="num neg">−0.053</td><td class="num pos">+0.034</td><td class="num pos">+0.052</td></tr>
+<tr><td>Q3</td><td>1.93–2.27%</td><td class="num">0.944 ± 0.003</td><td class="num neg">−0.058</td><td class="num pos">+0.035</td><td class="num pos">+0.056</td></tr>
+<tr class="hl"><td>Q4</td><td>2.28–5.12%</td><td class="num">0.911 ± 0.002</td><td class="num neg">−0.065</td><td class="num pos">+0.041</td><td class="num pos">+0.088</td></tr>
+</tbody>
+</table>
+
+<p>Because the validation set is occupancy-sparse, a skeptic might worry the IoU gains are some background-counting artifact. This table answers that: it splits objects into equal-sized density quartiles, and since IoU already ignores true negatives, these are overlap-on-structure numbers. Two things hold across every quartile: <strong>hard projection hurts everywhere</strong>, and <strong>local BP helps everywhere</strong>. And the densest, hardest objects (Q4) get the <em>biggest</em> local-BP gain (neighbor Δ = +0.088). The paper's explanation: denser objects expose more surface, which places more local checks where the proposal is uncertain — more single-error-informative checks ⇒ more gain. Hard projection can't capture this because its high-weight checks have negligible $P_1$ in <em>any</em> stratum.</p>
+
+<h3>4.5 The auxiliary temporal diagnostic (appendix)</h3>
+
+<table>
+<caption>Appendix table (paper): Temporal accumulation on a 20-frame morphing scene, 8% surface tampering per frame. No neural decoder — spectral prior + surface BP only. Deterministic; identical across seeds.</caption>
+<thead>
+<tr><th>Decoding strategy</th><th class="num">Mean IoU</th><th class="num">After 5 frames</th></tr>
+</thead>
+<tbody>
+<tr><td>Single-frame surface BP</td><td class="num">0.847</td><td class="num">0.847</td></tr>
+<tr class="hl"><td>+ Bayesian accumulation</td><td class="num">0.958</td><td class="num">0.975</td></tr>
+</tbody>
+</table>
+
+<p>This is explicitly a side dish, not part of the central static-grid claim. If several noisy frames of the same scene are available, a per-voxel Bayesian log-odds accumulator (EMA coefficient $\alpha=0.7$, clamped to $\pm5$ to prevent lock-in, soft-decayed on changed voxels) fuses them and lifts IoU from 0.847 to 0.958. Useful to know it composes over time, but the paper does not lean on it.</p>
+
+<!-- ============================================================ -->
+<h2>5. How to read it like a skeptical reviewer</h2>
+
+<h3>5.1 The central claims to scrutinize</h3>
+<ol>
+  <li><strong>"Hard projection damages a good proposal."</strong> Defended by Table 1's −0.059 ΔIoU and the 94.7%-harmful-flips diagnostic, over 3 seeds with SEMs. The diagnostic is what sells it: it's not just that IoU dropped, it's <em>why</em> (the flips go the wrong way). This is the strongest, most clearly supported claim.</li>
+  <li><strong>"Local overlapping surface checks help."</strong> Defended by Table 2 (+0.036 to +0.062) and the monotone weight trend, replicated across all four density quartiles in Table 4. Also well supported.</li>
+  <li><strong>"Check weight controls local informativeness."</strong> This is the <em>theory</em> linking the two. $P_1(w,p)=w(1-p)p^{w-1}$ is elementary and correct; the $w^*=-1/\ln p$ optimum is a one-line calculus result. Treat it as an <em>explanatory model</em>, not a tight bound on IoU — the paper itself frames reconstruction quality as scaling with the <em>number</em> of locally informative checks, not directly with $P_1$.</li>
+</ol>
+
+<h3>5.2 Baselines and what's compared to what</h3>
+<div class="warn">
+<span class="tag">The comparison you must keep honest</span>
+Table 2 is the load-bearing comparison, and the paper is careful that it holds the proposal fixed — so the only thing varying is the post-processing, which is exactly the right ablation. But the local-check rows spend extra bits the global row does not. The fair reading is: "given a fixed strong proposal, local overlapping checks are the right <em>shape</em> of constraint, and hard global projection is the wrong shape." It is <strong>not</strong>: "local BP gives free IoU" or "this beats codec X at bitrate Y." The paper does not claim the latter and a reviewer should resist importing it.
+</div>
+<p>Note what is <em>absent</em> from the headline tables: no head-to-head against established voxel/point-cloud codecs (Draco etc. appear only as historical baselines in REPRODUCIBILITY.md, not in the submission tables), and no entropy-coded bitstream. The paper lists exactly this as future work. So "is this competitive compression?" is not a question this paper tries to answer — and you shouldn't grade it as if it did.</p>
+
+<h3>5.3 What would falsify the core claim</h3>
+<ul>
+  <li>If, on a fresh dataset / resolution, hard projection of a strong proposal <em>improved</em> IoU, or the helpful-flip fraction were near 50% rather than ~5%, the "global projection damages" claim would be in trouble.</li>
+  <li>If local overlapping surface BP did <em>not</em> beat the raw proposal — or if the weight ordering (2 &gt; 4 &gt; 8) reversed — the locality principle would be undermined.</li>
+  <li>If the gains vanished once you matched the extra bit budget against an equally-funded global scheme, the "locality, not bits" interpretation would weaken. (The paper doesn't run this rate-matched comparison; it's the most natural follow-up a reviewer would request.)</li>
+</ul>
+
+<h3>5.4 Limitations the paper states itself</h3>
+<ul>
+  <li>Tested at $32^3$ resolution only.</li>
+  <li>Not a complete entropy-coded production codec; rate accounting is nominal (8 bits/coefficient), with no serialized/quantized coefficient bitstream.</li>
+  <li>Full rate claims would need to count <em>all</em> payloads: fixed syndrome, surface-refinement syndromes, coarse occupancy, spectral coefficients, and any variable-rate metadata.</li>
+  <li>No head-to-head against established codecs (Draco) — future work.</li>
+  <li>The surface-attention decoder is reported as a documented <em>negative result</em> (not competitive with the matched-parameter ResNet at $32^3$); included for completeness in the reproducibility audit.</li>
+</ul>
+
+<div class="good">
+<span class="tag">Reviewer's bottom line</span>
+The paper is internally consistent, multi-seeded (42/43/44), reports SEMs, traces every number to a single reproducer (<code>reproduce_results.py</code> + the <code>data/clean-v2-*</code> artifacts), and — notably — flags and corrects its own earlier false theorem. The claims are appropriately scoped to "constraint-design diagnosis," and the evidence supports that scope. The honest gaps (rate-matched comparison, larger N, real codec baselines, entropy coding) are named as future work rather than papered over.
+</div>
+
+<!-- ============================================================ -->
+<h2>6. Glossary</h2>
+<dl class="glossary">
+  <dt>Occupancy grid / voxel</dt>
+  <dd>A 3D array of 0/1 cells; 1 = occupied. Here $32^3 = 32{,}768$ voxels, $N$ in the equations. A voxel is the 3D analog of a pixel.</dd>
+
+  <dt>GF(2) / parity</dt>
+  <dd>Arithmetic on $\{0,1\}$ where $1+1=0$ (XOR). A parity check reports whether a chosen set of bits sums to even (0) or odd (1).</dd>
+
+  <dt>Parity-check matrix $\mathbf{H}$</dt>
+  <dd>$M\times N$ binary matrix; each row is one parity check, with 1s marking the voxels it sums. Here $M=2{,}977$, $N=32{,}768$.</dd>
+
+  <dt>Syndrome $\mathbf{s}$</dt>
+  <dd>$\mathbf{s}=\mathbf{H}\mathbf{x}\bmod 2$, the $M$-bit fingerprint of the data. Decoding = recovering $\mathbf{x}$ from $\mathbf{s}$ (plus side info).</dd>
+
+  <dt>Underdetermined / coset</dt>
+  <dd>$M<N$, so many $\mathbf{x}$ share a syndrome. The set sharing one syndrome is a coset of size $2^{N-\operatorname{rank}\mathbf{H}}=2^{29791}$ here.</dd>
+
+  <dt>Check weight $w$</dt>
+  <dd>Number of voxels a check sums (1s in its row). "Local"/"low-weight" = small $w$ (2–8); "global"/"high-weight" = large $w$ (32–1024).</dd>
+
+  <dt>Side information $\mathbf{c}$</dt>
+  <dd>Extra data the decoder gets — here low-frequency spectral (transform) coefficients: a cheap blurry sketch of the shape, shared by encoder and decoder.</dd>
+
+  <dt>Learned proposal $P_\theta$</dt>
+  <dd>A neural network (here a ~25M-param flat 3D ResNet) trained on real 3D objects that outputs a soft per-voxel occupancy guess from side info + syndrome features.</dd>
+
+  <dt>IoU (Intersection over Union)</dt>
+  <dd>Overlap of predicted-on and true-on voxels divided by their union. Ignores empty background, so it scores the actual shape surface. 1.0 = perfect.</dd>
+
+  <dt>Hard algebraic projection (operation A)</dt>
+  <dd>Force the proposal to exactly satisfy the syndrome via the minimum-Hamming-weight right-inverse correction $\hat{\mathbf{x}}=\tilde{\mathbf{x}}+\mathbf{L}\mathbf{r}$. The paper shows this damages a good proposal.</dd>
+
+  <dt>Belief propagation (BP) / Tanner graph</dt>
+  <dd>Iterative soft message-passing between variable nodes (voxels, beliefs from the network) and check nodes (syndrome values) over a bipartite graph. Settles uncertain voxels toward locally consistent values without hard-forcing them.</dd>
+
+  <dt>Single-error informativeness $P_1(w,p)$</dt>
+  <dd>Probability a weight-$w$ check contains exactly one error: $w(1-p)p^{w-1}$. Maximized at $w^*=-1/\ln p$; decays exponentially for large $w$. The theoretical reason low-weight checks are useful and high-weight ones aren't.</dd>
+
+  <dt>SEM (standard error of the mean)</dt>
+  <dd>The ± spread reported in the tables, computed across the three seeds (42/43/44). Smaller = more stable across seeds.</dd>
+
+  <dt>Spectral level (L2–L8)</dt>
+  <dd>How many low-frequency coefficients are retained — i.e., how detailed the shared sketch is. Higher level = more bits, better reconstruction.</dd>
+</dl>
+
+<!-- ============================================================ -->
+<h2>7. Key takeaways</h2>
+<ol>
+  <li><strong>The proposal does the work; constraints only refine.</strong> The learned network reaches IoU 0.9370 on its own; post-processing moves it by at most ~0.06. Strong proposals are the prerequisite — constraints are a targeted polish, not the engine.</li>
+  <li><strong>Hard projection of a good proposal is actively harmful.</strong> −0.059 IoU, with 94.7% of flips moving away from truth, because minimum-Hamming-weight algebra ≠ spatial coherence and global checks act at the wrong (32-voxel) scale.</li>
+  <li><strong>Local + overlapping + surface-targeted checks help, and lower weight helps more.</strong> +0.036 (w=8) → +0.062 (w=2), replicated across all four density quartiles, with the biggest gains on the densest objects.</li>
+  <li><strong>One small theory explains both directions.</strong> $P_1(w,p)=w(1-p)p^{w-1}$ peaks at small $w^*=-1/\ln p$ for high-accuracy proposals; residual-only correction provably increases expected error for $w\ge3$, so an external prior (the proposal, or overlapping local checks) is <em>necessary</em>.</li>
+  <li><strong>Constraint locations can be free.</strong> Deriving surface checks from shared side-information costs zero signaling bits for the locations (the check <em>values</em> still cost bits — reported as a separate diagnostic, not folded into rate–distortion).</li>
+  <li><strong>Scope honesty is a feature, not a hedge.</strong> This is a constraint-design diagnosis at $32^3$, not a finished codec; it names its gaps (larger N, entropy coding, rate-matched and codec baselines) and even retracts its own earlier over-strong theorem.</li>
+</ol>
+
+<p class="footer-note">
+All tables and numbers above are reproduced from <code>main.tex</code> and verified against the reproducer artifacts <code>data/clean-v2-may02-rsfix/aggregate_summary.json</code> and <code>data/clean-v2-may02-strata/strata_summary.json</code> (seeds 42/43/44, 200 ShapeNet validation samples). Per the project's paper-numbers policy, every claim traces to <code>reproduce_results.py</code>. This tutorial introduces no numbers not present in the paper.
+</p>
+
+</div>
+</body>
+</html>

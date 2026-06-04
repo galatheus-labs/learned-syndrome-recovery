@@ -10,6 +10,7 @@ constraint locality in learned syndrome decoding for 3D occupancy grids.
 - `reproduce_results.py`: paper reproducer for deterministic checks, baselines,
   and checkpoint-dependent metrics.
 - `stratify_compression_results.py`: occupancy-quartile stratification.
+- `configs/`: retained clean-v2 configs for the three paper seeds.
 - `data/`: checked-in aggregate JSON artifacts used by the paper.
 
 ## Quick Check

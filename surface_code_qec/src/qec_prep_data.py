@@ -1,11 +1,11 @@
 """Pre-compute QEC training data with label-preserving D4 augmentation.
 
 Run this on CPU-only nodes (tinkara/milan) to generate augmented
-training data and save to /work for GPU nodes to load.
+training data and save it for GPU nodes to load.
 
 Usage:
     python qec_prep_data.py --distance 9 --n-per-rate 50000 \
-        --out-dir /work/qec_data/d9_s42_aug --augment --seed 42
+        --out-dir runs/qec_data/d9_s42_aug --augment --seed 42
 """
 
 import argparse

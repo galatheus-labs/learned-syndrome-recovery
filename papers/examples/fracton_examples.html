@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Examples: Structure-Aware Neural Decoding for the X-Cube Fracton Code</title>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root {
+    --ink: #1c2126;
+    --muted: #5a6572;
+    --accent: #2b5d8a;
+    --accent-soft: #eaf2f8;
+    --warn-bg: #fdf4e6;
+    --warn-br: #e0a64a;
+    --good-bg: #edf7ee;
+    --good-br: #5aa85f;
+    --gloss-bg: #f6f7f9;
+    --line: #d8dde3;
+    --defect: #d6453c;
+    --errcol: #2b5d8a;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.62;
+    font-size: 18px;
+    margin: 0;
+    background: #fbfcfd;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  h1 {
+    font-size: 30px;
+    line-height: 1.25;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 19px;
+    margin: 0 0 8px;
+    font-weight: 400;
+  }
+  .byline {
+    color: var(--muted);
+    font-size: 15px;
+    margin: 0 0 36px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 24px;
+  }
+  h2 {
+    font-size: 23px;
+    margin: 52px 0 14px;
+    padding-top: 8px;
+    border-top: 2px solid var(--accent-soft);
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+  h3 { font-size: 19px; margin: 30px 0 8px; color: var(--ink); }
+  p { margin: 12px 0; }
+  a { color: var(--accent); }
+  code {
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: #eef1f4;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .aside {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 22px 0;
+    font-size: 16.5px;
+  }
+  .aside .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+  .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-br); }
+  .warn .label { color: #b06d11; }
+  .good { background: var(--good-bg); border-left: 4px solid var(--good-br); }
+  .good .label { color: #3c7a41; }
+  .small { font-size: 15px; color: var(--muted); }
+  hr { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+
+  /* ---- interactive widget shells ---- */
+  .widget {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px 22px;
+    margin: 24px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .widget h3 { margin-top: 0; }
+  .teaches {
+    font-size: 15.5px;
+    color: var(--muted);
+    margin: 2px 0 16px;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    align-items: center;
+    margin: 14px 0;
+  }
+  button {
+    font: inherit;
+    font-size: 15px;
+    padding: 6px 14px;
+    border: 1px solid var(--line);
+    background: #f0f3f6;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  button:hover { background: #e2e8ee; }
+  button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { border: none; border-radius: 0; margin: 0; background: #f0f3f6; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.active { background: var(--accent); color: #fff; }
+  label.ctl { font-size: 15px; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+  .readout {
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 15px;
+    background: var(--gloss-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 12px 0 0;
+    display: inline-block;
+  }
+  .readout b { color: var(--accent); }
+  .readout .d { color: var(--defect); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; color: var(--muted); margin: 12px 0 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid rgba(0,0,0,0.15); }
+  canvas { display: block; max-width: 100%; touch-action: none; }
+  .canvas-host { display: flex; justify-content: center; margin: 8px 0; }
+
+  /* scoreboard / chart */
+  .bars { width: 100%; }
+  .barrow { display: grid; grid-template-columns: 130px 1fr 78px; align-items: center; gap: 10px; margin: 7px 0; font-size: 14.5px; }
+  .barrow .name { text-align: right; color: var(--ink); font-weight: 600; }
+  .bartrack { background: #eef1f4; border-radius: 5px; height: 22px; position: relative; overflow: hidden; }
+  .barfill { height: 100%; border-radius: 5px 0 0 5px; transition: width 0.35s ease; }
+  .barrow .val { font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 13.5px; color: var(--muted); }
+  .b-learned { background: #2f8f46; }
+  .b-bw      { background: #b06d11; }
+  .b-bp      { background: #8a4fb0; }
+  .b-triv    { background: #9aa3ad; }
+  .winner-note { font-size: 14px; color: var(--muted); margin-top: 10px; }
+  .figcap { font-size: 14.5px; color: var(--muted); font-style: italic; margin: 8px 0 0; }
+  table.mini { border-collapse: collapse; width: 100%; margin: 14px 0 0; font-size: 14px; }
+  table.mini th, table.mini td { border: 1px solid var(--line); padding: 5px 8px; text-align: center; }
+  table.mini th { background: #f0f3f6; }
+  table.mini td.win { font-weight: 700; color: #1f6b27; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Hands-On Examples for the X-Cube Fracton Decoder</h1>
+<p class="subtitle">Four interactive demos you can poke at &mdash; the geometry, the decode pipeline, the scoreboard, and the noise sweep</p>
+<p class="byline">
+  Companion to <a href="tutorial.html">tutorial.html</a> and to the paper <em>&ldquo;Structure-Aware Neural Decoding for the X-Cube Fracton Code&rdquo;</em> (B.&nbsp;Guarraci, Galatheus).
+  The tutorial explains <em>why</em> fracton decoding is hard and what the paper claims; this page lets you <em>see</em> it. Every widget below runs entirely offline with hand-written canvas + JavaScript &mdash; no libraries. The geometry in Widget&nbsp;1 is derived directly from the edge&rarr;cube incidence in <code>internal/fracton/xcube_code.py</code> (the offset table is machine-checked against <code>make_xcube</code> for every edge); Widget&nbsp;2 is a schematic of the decode path described in <a href="tutorial.html">tutorial.html</a> &sect;3.2&ndash;3.3; and all numbers in Widgets&nbsp;3&ndash;4 (and the ablation figures in Widget&nbsp;2) are taken verbatim from the <code>data/</code> JSON files. Nothing is invented.
+</p>
+
+<div class="aside">
+  <span class="label">The one idea to hold onto</span>
+  In the surface code an error is a <em>string</em> that lights two defects you can pair up. In the X-cube code an error lights <strong>four defects at once</strong>, arranged as a rigid 2&times;2 block, and they are <strong>immobile</strong> &mdash; there is no string to follow. That single fact breaks matching decoders and is what the learned line-aware decoder is built to handle. Widget&nbsp;1 lets you create those four-at-a-time defects yourself.
+</div>
+
+<!-- ============================================================= -->
+<h2>1. Errors make fractons (and why matching fails)</h2>
+
+<div class="widget">
+  <h3>Cube-syndrome visualizer &mdash; one transverse slice of an \(L=4\) lattice</h3>
+  <p class="teaches">
+    <strong>What this teaches:</strong> click an edge to place an \(X\) error and watch it light exactly <em>four</em> cube defects in a rigid 2&times;2 block (a fracton quadruple, immobile, with no string to match). Then click an adjacent parallel edge: the two errors <em>share</em> cube defects, which cancel, exposing the line/membrane structure that the paper's <span style="font-variant:small-caps">AxisLineonHead</span> exploits.
+  </p>
+
+  <div class="controls">
+    <span class="seg" id="w1-axis">
+      <button data-axis="2" class="active">z-edges (in-plane)</button>
+      <button data-axis="0">x-edges</button>
+      <button data-axis="1">y-edges</button>
+    </span>
+    <button id="w1-clear">Clear</button>
+    <button id="w1-demo-quad">Demo: one error &rarr; 4 fractons</button>
+    <button id="w1-demo-line">Demo: a membrane segment</button>
+  </div>
+
+  <div class="canvas-host">
+    <canvas id="w1-canvas" width="560" height="560" aria-label="cube syndrome lattice slice"></canvas>
+  </div>
+
+  <div class="legend">
+    <span><span class="swatch" style="background:#cfe0ee"></span> clickable edge (qubit)</span>
+    <span><span class="swatch" style="background:var(--errcol)"></span> X error placed</span>
+    <span><span class="swatch" style="background:#f1f3f5"></span> cube center (quiet)</span>
+    <span><span class="swatch" style="background:var(--defect)"></span> lit cube defect (fracton)</span>
+  </div>
+
+  <div class="readout" id="w1-readout"></div>
+
+  <p class="figcap" id="w1-caption"></p>
+</div>
+
+<div class="warn">
+  <span class="label">Contrast with the surface code</span>
+  A surface-code error string lights <em>two</em> endpoint defects, and a minimum-weight matching pairs them with the cheapest connecting path &mdash; the whole algorithm relies on &ldquo;defects come in pairs joined by a string.&rdquo; Here a single error gives <strong>four</strong> defects at the corners of a flat region, none of them connected by a 1D string. There is no pairing to do, so MWPM has nothing to match. This is exactly why the paper turns to a learned decoder.
+</div>
+
+<div class="good">
+  <span class="label">What the cancellation shows (toggle two adjacent parallel edges)</span>
+  Two parallel edges sitting side by side in the transverse plane share two of their cube checks. Those shared checks see <em>two</em> flips &mdash; an even number &mdash; so they go quiet, and defects survive only at the two outer ends. Extend a whole row of parallel edges and the interior defects all cancel; a full periodic row leaves <strong>zero</strong> defects (it is a logical/stabilizer line). That is the long line/membrane structure where the X-cube hides its logical information, and the <span style="font-variant:small-caps">AxisLineonHead</span> pools along exactly these axes to read it.
+</div>
+
+<!-- ============================================================= -->
+<h2>2. How the decoder reads the lattice &mdash; the <span style="font-variant:small-caps">AxisLineonHead</span> pipeline</h2>
+
+<div class="widget">
+  <h3>From cube syndrome to recovery, one stage at a time</h3>
+  <p class="teaches">
+    <strong>What this teaches:</strong> the decoder is a <em>generic</em> 3D CNN body plus <em>one</em> code-aware head. The head is the whole trick &mdash; it pools features <em>along the logical lines</em> where the X-cube hides its information, then reads off one parity per logical sector. Step through the five stages, and toggle the head to see why a generic global-pool head learns <em>nothing</em> (it ties the do-nothing floor exactly).
+  </p>
+
+  <div class="controls">
+    <button id="pl-prev">&larr; Prev</button>
+    <span class="seg" id="pl-stage">
+      <button data-s="0" class="active">1 · Syndrome</button>
+      <button data-s="1">2 · 3D CNN body</button>
+      <button data-s="2">3 · Axis collapse</button>
+      <button data-s="3">4 · Gather</button>
+      <button data-s="4">5 · Recover</button>
+    </span>
+    <button id="pl-next">Next &rarr;</button>
+  </div>
+  <div class="controls">
+    <label class="ctl">Head:&nbsp;<span class="seg" id="pl-head">
+      <button data-h="a1" class="active">AxisLineonHead</button>
+      <button data-h="gp">Global-avg pool (ablation)</button>
+    </span></label>
+  </div>
+
+  <div class="canvas-host">
+    <canvas id="pl-canvas" width="680" height="360" aria-label="decoder pipeline schematic"></canvas>
+  </div>
+  <p class="figcap" id="pl-cap"></p>
+</div>
+
+<div class="aside">
+  <span class="label">The coset-classification reframing (why it is a classifier at all)</span>
+  For any syndrome \(s\) you can fix <em>some</em> error \(R(s)\) consistent with it (a &ldquo;pure error,&rdquo; pure linear algebra from \(H_Z\)). The true error differs from \(R(s)\) only by <strong>which logical coset</strong> it lives in &mdash; exactly the \(6L-3\) parity bits. So decoding = predict \(6L-3\) bits, then apply \(R(s)\) plus the predicted logical representative. A per-sector error is just one wrong bit &mdash; and those bits are precisely the head's per-sector logits.
+</div>
+
+<div class="good">
+  <span class="label">Why the ablation is the proof (toggle the head above)</span>
+  Swap the line-aggregation head for a <em>global average pool</em> and the network collapses the whole lattice to one vector &mdash; it can no longer tell <em>where</em> evidence sits, so it can only emit the global prior. Its block failure is <strong>0.7342</strong>, identical to the trivial floor <strong>0.7342</strong>: it learns nothing. The <span style="font-variant:small-caps">AxisLineonHead</span> (and a coordinate-conv variant) instead score <strong>0.303</strong> / <strong>0.302</strong>. Same body, same data, same capacity &mdash; the <em>only</em> change is whether the head preserves the line structure. That is the inventive step, made falsifiable.
+</div>
+
+<!-- ============================================================= -->
+<h2>3. Decoder scoreboard</h2>
+
+<div class="widget">
+  <h3>Learned vs. Brown&ndash;Williamson vs. BP+OSD-0 vs. trivial &mdash; all ten cells</h3>
+  <p class="teaches">
+    <strong>What this teaches:</strong> the learned decoder is best in every one of the ten \((L,p)\) cells, on both metrics. Flip to <em>per-sector LER</em> at \(p=0.03\) and step \(L:3\!\to\!4\!\to\!6\!\to\!8\!\to\!10\) to watch the headline: the learned rate <em>improves</em> with code size (\(0.042\!\to\!0.035\!\to\!0.018\!\to\!0.008\!\to\!0.003\)) while every baseline <em>worsens</em>.
+  </p>
+
+  <div class="controls">
+    <label class="ctl">Code size&nbsp;<span class="seg" id="w2-L">
+      <button data-l="3" class="active">L = 3</button>
+      <button data-l="4">L = 4</button>
+      <button data-l="6">L = 6</button>
+      <button data-l="8">L = 8</button>
+      <button data-l="10">L = 10</button>
+    </span></label>
+    <label class="ctl">Noise&nbsp;<span class="seg" id="w2-p">
+      <button data-p="0.03" class="active">p = 0.03</button>
+      <button data-p="0.05">p = 0.05</button>
+    </span></label>
+    <label class="ctl">Metric&nbsp;<span class="seg" id="w2-metric">
+      <button data-m="per_sector" class="active">Per-sector LER</button>
+      <button data-m="block">Block failure</button>
+    </span></label>
+  </div>
+
+  <div class="bars" id="w2-bars"></div>
+  <p class="winner-note" id="w2-note"></p>
+
+  <div class="controls" style="margin-top:18px">
+    <label class="ctl">Scaling trend (per-sector LER vs. \(L\)) at&nbsp;<span class="seg" id="w2-trendp">
+      <button data-p="0.03" class="active">p = 0.03</button>
+      <button data-p="0.05">p = 0.05</button>
+    </span></label>
+  </div>
+  <div class="canvas-host">
+    <canvas id="w2-trend" width="640" height="320" aria-label="per-sector LER vs code size"></canvas>
+  </div>
+  <p class="figcap">
+    Lines: per-sector LER as \(L\) grows. Only the learned decoder slopes <em>downward</em>. At \(p=0.03\) the learned curve falls \(0.042\rightarrow0.035\rightarrow0.018\rightarrow0.008\rightarrow0.003\); Brown&ndash;Williamson rises \(0.098\rightarrow0.169\rightarrow0.242\rightarrow0.295\rightarrow0.336\), crossing above the trivial floor by \(L=6\) (BP+OSD-0 too, by \(L=8\)) &mdash; so by \(L=10\) the learned decoder is the only one of four that still beats doing nothing on this per-sector metric.
+  </p>
+</div>
+
+<div class="aside">
+  <span class="label">Why per-sector LER is the honest metric</span>
+  Block failure asks for all \(6L-3\) logical sectors correct at once, so it is brutal for every decoder at large \(L\) &mdash; one slip ruins the block. Per-sector LER is the per-logical-qubit rate, and it is where the scaling story lives: a fixed-capacity local rule (or a lookup table) <em>cannot</em> improve with size, but the learned decoder does, because it reads non-local line structure.
+</div>
+
+<!-- ============================================================= -->
+<h2>4. Noise slider</h2>
+
+<div class="widget">
+  <h3>Sweeping \(p\) at \(L=4\) &mdash; the learned advantage fades to a tie near threshold</h3>
+  <p class="teaches">
+    <strong>What this teaches:</strong> drag the noise slider across \(p\in\{0.03,0.05,0.07,0.09,0.11,0.13\}\). The learned decoder beats trivial cleanly at low noise, the gap narrows, and the two <em>tie</em> by \(p\approx0.11\)&ndash;\(0.13\), in the vicinity of the \(\approx7.5\%\) optimal fracton-sector threshold. BP+OSD-0 is dominated throughout. The decoder is not magic at arbitrary noise &mdash; a limitation the paper states itself.
+  </p>
+
+  <div class="controls">
+    <label class="ctl" style="width:100%;max-width:520px">
+      p =&nbsp;<input type="range" id="w3-slider" min="0" max="5" step="1" value="1" style="flex:1">
+      <b id="w3-pval" style="font-family:monospace;color:var(--accent);min-width:48px;text-align:right">0.05</b>
+    </label>
+  </div>
+
+  <div class="bars" id="w3-bars"></div>
+
+  <div class="canvas-host">
+    <canvas id="w3-curve" width="660" height="320" aria-label="per-sector LER vs noise rate"></canvas>
+  </div>
+  <p class="figcap" id="w3-cap">
+    Per-sector LER vs. noise \(p\) at \(L=4\). The vertical marker tracks the slider. Learned (green) hugs just under trivial (grey) and converges to it near \(p\approx0.11\); BP+OSD-0 (purple) sits well above both.
+  </p>
+</div>
+
+<div class="warn">
+  <span class="label">Bounded operating range (paper's own limitation)</span>
+  The learned per-sector advantage over trivial decays smoothly: a clear win at \(p=0.05\) (0.110 vs 0.172), narrowing to 0.198 vs 0.227 at \(p=0.07\) and 0.267 vs 0.274 at \(p=0.09\), then closing to a statistical tie by \(p\approx0.11\)&ndash;0.13. This puts the useful range up near the \(\approx7.5\%\) optimal threshold &mdash; honest, and exactly what the paper reports.
+</div>
+
+<hr>
+<p class="small">
+  Companion to <a href="tutorial.html">tutorial.html</a> and <code>main.tex</code>. Widget&nbsp;1 geometry is derived from <code>internal/fracton/xcube_code.py</code> (offset table machine-verified against <code>make_xcube</code> for every edge and axis). Widget&nbsp;2 is a schematic of the decode pipeline (&sect;3.2&ndash;3.3 of the tutorial); its ablation figures (0.7342 / 0.303 / 0.302) come from <code>data/xcube_L346_gen.json</code> &rarr; <code>sections.ablation</code>. Widget&nbsp;3&ndash;4 numbers are taken verbatim from <code>data/xcube_L346_gen.json</code>, <code>data/xcube_L810_gen.json</code>, <code>data/xcube_L4_psweep.json</code>, and <code>data/xcube_bw_baseline.json</code> per <code>REPRODUCIBILITY.md</code>. No results were invented.
+</p>
+
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   WIDGET 1 — Cube-syndrome visualizer.
+
+   Geometry, derived DIRECTLY from internal/fracton/xcube_code.py:
+
+     - Lattice is periodic L^3. Qubits live on edges (x,y,z,d), d in {0:x,1:y,2:z}.
+     - The Z-type "cube" stabilizer at cube-center (cx,cy,cz) is the product of
+       its 12 edges; the cube (Z) syndrome detects X errors.
+     - A single X error on edge (x,y,z,d) flips EXACTLY the 4 cube stabilizers
+       sharing that edge. Reading make_xcube's q(...) indexing, the four cube
+       centers are (edge coordinate + offset) mod L with the offsets:
+
+         d=0 (x-edge): (x,      y+{0,-1}, z+{0,-1})  -> 2x2 block in (cy,cz), fixed cx
+         d=1 (y-edge): (x+{0,-1}, y,      z+{0,-1})  -> 2x2 block in (cx,cz), fixed cy
+         d=2 (z-edge): (x+{0,-1}, y+{0,-1}, z     )  -> 2x2 block in (cx,cy), fixed cz
+
+       This offset table was checked exhaustively against make_xcube (all edges,
+       all axes) and matches.
+
+   To make the 2x2-block AND the collinear-cancellation both visible in a single
+   2D picture, we render ONE transverse plane:
+
+     - For z-edges (d=2): we draw the slice at fixed z = SLICE. Every z-edge in
+       that slice lights cubes only at cz = z (its 2x2 block stays in-plane), so
+       the whole syndrome story is visible in the (cx,cy) plane. This is the
+       default and the cleanest view.
+     - For x-edges / y-edges we draw the analogous transverse slice; their 2x2
+       block also lands fully in the drawn plane (we fix the edge's own-axis
+       coordinate to SLICE, and the block spreads in the two transverse cube
+       coords). Collinear cancellation for these is along the in-plane direction.
+
+   Concretely, in the drawn plane we have an L x L grid of edge nodes (indexed by
+   the two transverse lattice coords (a,b)) and an L x L grid of cube centers,
+   offset by half a cell. Clicking an edge node toggles an X error; the cube
+   defects are recomputed from scratch by XOR-ing each active edge's 4-cube
+   contribution (mod 2), so the readout is always exactly the real syndrome.
+   ===================================================================== */
+(function () {
+  const L = 4;
+  const canvas = document.getElementById("w1-canvas");
+  const ctx = canvas.getContext("2d");
+  const SLICE = 0;                 // which transverse slice (the edge's own-axis coord)
+  let axis = 2;                    // 0:x-edge, 1:y-edge, 2:z-edge  (default z-edges)
+  // active edges: set of "a,b" keys (the two transverse lattice coords in the plane)
+  let active = new Set();
+
+  // The 2x2 cube offsets per axis as [dOwn, dT1, dT2] in lattice (x,y,z) order is
+  // implicit; we work in transverse (a,b) plane coords. For a given axis, the two
+  // transverse cube coords each take offset {0,-1}. We track them in plane space.
+
+  // layout
+  const pad = 54;
+  const W = canvas.width, H = canvas.height;
+  const cell = (W - 2 * pad) / L;       // spacing between edge nodes
+  const r = 8;                          // edge node radius
+
+  // Map a transverse lattice coord (a,b) in [0,L) to pixel center of an edge node.
+  function edgePix(a, b) {
+    return { x: pad + a * cell + cell * 0.5, y: pad + (L - 1 - b) * cell + cell * 0.5 };
+  }
+  // Cube centers sit at half-integer positions. A cube with transverse coords (ca,cb)
+  // is drawn at the lattice corner between edge nodes; we place it offset by +half cell
+  // (toward larger pixel) from edge node (ca,cb). With the {0,-1} offsets, an edge at
+  // (a,b) lights cubes (a,b),(a-1,b),(a,b-1),(a-1,b-1) mod L. We render each cube ID
+  // at the pixel position just "below-left" of its top-right edge node.
+  function cubePix(ca, cb) {
+    // cube (ca,cb) drawn between edge nodes; place at edge node (ca,cb) shifted by +half cell in -a / +b?
+    // We want the 2x2 of an edge (a,b) to surround that edge node. The 4 cubes
+    // (a,b),(a-1,b),(a,b-1),(a-1,b-1) should sit at the 4 corners around node (a,b).
+    // So cube (ca,cb) is drawn at the corner up-right of edge node (ca,cb):
+    const e = edgePix(ca, cb);
+    return { x: e.x + cell * 0.5, y: e.y - cell * 0.5 };
+  }
+
+  // Compute the lit cube-defect set from the active edges, exactly per the incidence.
+  function computeDefects() {
+    const counts = new Map(); // "ca,cb" -> parity
+    for (const key of active) {
+      const [a, b] = key.split(",").map(Number);
+      // 2x2 cubes: (a,b),(a-1,b),(a,b-1),(a-1,b-1) mod L
+      const cubes = [
+        [a, b], [(a - 1 + L) % L, b], [a, (b - 1 + L) % L], [(a - 1 + L) % L, (b - 1 + L) % L]
+      ];
+      for (const [ca, cb] of cubes) {
+        const k = ca + "," + cb;
+        counts.set(k, (counts.get(k) || 0) ^ 1);
+      }
+    }
+    const lit = new Set();
+    for (const [k, v] of counts) if (v) lit.add(k);
+    return lit;
+  }
+
+  function axisLabel() {
+    return axis === 0 ? "x" : axis === 1 ? "y" : "z";
+  }
+  // The two transverse axis names for the current edge axis, for labels.
+  function transverseNames() {
+    if (axis === 0) return ["y", "z"]; // x-edge -> block in (cy,cz)
+    if (axis === 1) return ["x", "z"]; // y-edge -> block in (cx,cz)
+    return ["x", "y"];                 // z-edge -> block in (cx,cy)
+  }
+
+  function draw() {
+    const lit = computeDefects();
+    ctx.clearRect(0, 0, W, H);
+
+    // faint lattice grid lines between edge nodes
+    ctx.strokeStyle = "#eef1f4";
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= L; i++) {
+      const t = pad + i * cell;
+      ctx.beginPath(); ctx.moveTo(pad, t); ctx.lineTo(W - pad, t); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(t, pad); ctx.lineTo(t, H - pad); ctx.stroke();
+    }
+
+    // cube centers (small squares). Draw quiet first, lit on top.
+    const sq = 16;
+    for (let ca = 0; ca < L; ca++) {
+      for (let cb = 0; cb < L; cb++) {
+        const p = cubePix(ca, cb);
+        const isLit = lit.has(ca + "," + cb);
+        ctx.fillStyle = isLit ? getCss("--defect") : "#f1f3f5";
+        ctx.strokeStyle = isLit ? "#9b211a" : "#d8dde3";
+        ctx.lineWidth = isLit ? 2 : 1;
+        roundRect(ctx, p.x - sq / 2, p.y - sq / 2, sq, sq, 4);
+        ctx.fill(); ctx.stroke();
+      }
+    }
+
+    // edges (clickable nodes)
+    for (let a = 0; a < L; a++) {
+      for (let b = 0; b < L; b++) {
+        const p = edgePix(a, b);
+        const on = active.has(a + "," + b);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, on ? r + 1.5 : r, 0, Math.PI * 2);
+        ctx.fillStyle = on ? getCss("--errcol") : "#cfe0ee";
+        ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = on ? "#1d4060" : "#7da6c9";
+        ctx.stroke();
+      }
+    }
+
+    // axis labels
+    ctx.fillStyle = getCss("--muted");
+    ctx.font = "13px -apple-system, sans-serif";
+    const tn = transverseNames();
+    ctx.fillText(tn[0] + " →", W - pad + 4, H - pad + cell * 0.5 + 4);
+    ctx.save();
+    ctx.translate(pad - 30, pad + 6);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(tn[1] + " →", 0, 0);
+    ctx.restore();
+
+    updateReadout(lit);
+  }
+
+  function getCss(v) {
+    return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  }
+  function roundRect(c, x, y, w, h, rad) {
+    c.beginPath();
+    c.moveTo(x + rad, y);
+    c.arcTo(x + w, y, x + w, y + h, rad);
+    c.arcTo(x + w, y + h, x, y + h, rad);
+    c.arcTo(x, y + h, x, y, rad);
+    c.arcTo(x, y, x + w, y, rad);
+    c.closePath();
+  }
+
+  function updateReadout(lit) {
+    const nE = active.size, nD = lit.size;
+    document.getElementById("w1-readout").innerHTML =
+      "edges (X errors): <b>" + nE + "</b> &nbsp;&middot;&nbsp; lit cube defects: <span class=\"d\">" + nD + "</span>" +
+      "&nbsp;&middot;&nbsp; viewing <b>" + axisLabel() + "-edges</b> on the transverse " +
+      transverseNames().join("") + "-plane (slice " + axisLabel() + "=" + SLICE + ")";
+    let cap;
+    if (nE === 0) {
+      cap = "Click any blue edge node to place an X error.";
+    } else if (nE === 1 && nD === 4) {
+      cap = "One X error → four cube defects in a rigid 2×2 block. These are fractons: immobile, four-at-a-time, with no 1D string joining them — nothing for a matching decoder to pair.";
+    } else if (nD === 0) {
+      cap = "Zero defects: the active edges form a closed line/loop (a logical or stabilizer combination). The syndrome is blind to it — this is precisely the non-local structure the AxisLineonHead must learn to read.";
+    } else if (nE > 1) {
+      cap = nE + " parallel edges → " + nD + " defects. Shared cubes between adjacent edges saw an even number of flips and went quiet, leaving defects only at the ends: the membrane/line structure.";
+    } else {
+      cap = nD + " cube defects from " + nE + " error(s).";
+    }
+    document.getElementById("w1-caption").textContent = cap;
+  }
+
+  // hit-test: nearest edge node within radius
+  function hit(px, py) {
+    for (let a = 0; a < L; a++) {
+      for (let b = 0; b < L; b++) {
+        const p = edgePix(a, b);
+        if ((px - p.x) ** 2 + (py - p.y) ** 2 <= (r + 6) ** 2) return a + "," + b;
+      }
+    }
+    return null;
+  }
+
+  canvas.addEventListener("click", (ev) => {
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+    const px = (ev.clientX - rect.left) * sx, py = (ev.clientY - rect.top) * sy;
+    const k = hit(px, py);
+    if (k) {
+      if (active.has(k)) active.delete(k); else active.add(k);
+      draw();
+    }
+  });
+
+  document.getElementById("w1-clear").addEventListener("click", () => { active.clear(); draw(); });
+
+  document.querySelectorAll("#w1-axis button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#w1-axis button").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      axis = parseInt(btn.dataset.axis, 10);
+      active.clear();
+      draw();
+    });
+  });
+
+  document.getElementById("w1-demo-quad").addEventListener("click", () => {
+    active = new Set(["1,2"]);   // one edge -> 4 defects
+    draw();
+  });
+  document.getElementById("w1-demo-line").addEventListener("click", () => {
+    active = new Set(["0,1", "1,1", "2,1"]); // a segment of 3 parallel edges -> 4 end defects
+    draw();
+  });
+
+  draw();
+})();
+
+
+/* =====================================================================
+   WIDGET 2 — Decoder pipeline (AxisLineonHead) stepper.
+
+   Schematic of the decode path described in tutorial.html sec 3.2-3.3 and
+   main.tex sec on architecture:
+     cube (Z) syndrome field  ->  weight-shared 3D residual CNN body
+     (width 64, depth 8)  ->  per-axis mean+max collapse  ->  transverse 2D
+     conv  ->  per-sector gather (6L-3 logits)  ->  threshold -> coset parities
+     ->  compose with pure error R(s)  ->  recovery applied to qubits.
+   The head toggle contrasts the AxisLineonHead with the global-average-pool
+   ablation: block failure 0.7342 == trivial 0.7342 (a1 = 0.303, coordconv =
+   0.302), per data/xcube_L346_gen.json -> sections.ablation. No invented numbers.
+   ===================================================================== */
+(function () {
+  const cv = document.getElementById("pl-canvas");
+  if (!cv) return;
+  const c = cv.getContext("2d");
+  const W = cv.width, H = cv.height;
+  let stage = 0, head = "a1";
+  const STRIP = ["Syndrome", "3D CNN", "Collapse", "Gather", "Recover"];
+  const GREEN = "#2f8f46", AMBER = "#b06d11", MUT = "#9aa3ad", INK = "#1c2126", SUB = "#5a6572";
+
+  const CAP = [
+    "Stage 1 — Input. The cube (Z) stabilizer outcomes form an L×L×L scalar field: 1 at every violated check (red), 0 elsewhere. That field is the entire input — no hand-engineered features.",
+    "Stage 2 — Body. A weight-shared 3D residual CNN (width 64, depth 8) slides the same filters over the lattice, producing a feature volume. It is translation-equivariant, its parameter count does not grow with L, and it is generic — no code-specific knowledge yet.",
+    { a1: "Stage 3 — Axis collapse (the one code-aware step). For each logical-line axis, features are pooled ALONG that axis by mean ⊕ max into a transverse 2D map. Pooling along the line matches the lineon: a logical value lives on a whole line, not any single site.",
+      gp: "Stage 3 — Global average pool (ablation). All spatial positions are averaged into a single vector. The information about WHERE on the lattice the evidence sat is destroyed." },
+    { a1: "Stage 4 — Transverse conv + gather. A 2D conv over the transverse plane, then a gather reads one logit at each logical sector's (u,v) coordinate → 6L−3 per-sector logits: one number per logical qubit, located where that qubit lives.",
+      gp: "Stage 4 — Nothing to gather. From one pooled vector there is no transverse coordinate to read; the head can only emit the global class prior — i.e. the trivial 'do nothing' answer." },
+    { a1: "Stage 5 — Recover. Threshold the logits → predicted logical-coset parities; compose with the fixed pure error R(s) and the predicted logical representative → a recovery applied to the qubits. A per-sector error is one wrong bit. This path reaches per-sector LER 0.003 at L=10 (≈66× under trivial).",
+      gp: "Stage 5 — Recover (ablation). With only the global prior, recovery reproduces the do-nothing baseline: block failure 0.7342 = trivial 0.7342. Same body, same data — swapping the head back to line aggregation is the entire difference." },
+  ];
+
+  function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function txt(s, x, y, size, col, align) {
+    c.font = size + "px -apple-system, BlinkMacSystemFont, sans-serif";
+    c.fillStyle = col || INK; c.textAlign = align || "left"; c.fillText(s, x, y); c.textAlign = "left";
+  }
+  function arrow(x1, y1, x2, y2, col) {
+    col = col || SUB; c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+    const a = Math.atan2(y2 - y1, x2 - x1);
+    c.beginPath(); c.moveTo(x2, y2);
+    c.lineTo(x2 - 9 * Math.cos(a - 0.4), y2 - 9 * Math.sin(a - 0.4));
+    c.lineTo(x2 - 9 * Math.cos(a + 0.4), y2 - 9 * Math.sin(a + 0.4));
+    c.closePath(); c.fill();
+  }
+  function grid(x, y, n, cs, lit) {
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      const on = lit && lit.some((p) => p[0] === i && p[1] === j);
+      c.fillStyle = on ? css("--defect") : "#eef2f6";
+      c.fillRect(x + i * cs, y + j * cs, cs - 1, cs - 1);
+      c.strokeStyle = "#c5ccd4"; c.lineWidth = 1; c.strokeRect(x + i * cs, y + j * cs, cs - 1, cs - 1);
+    }
+  }
+  function stack(x, y, n, cs, layers) {
+    for (let L = layers - 1; L >= 0; L--) {
+      const ox = x + L * 7, oy = y - L * 7;
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+        c.fillStyle = L === 0 ? "#dce8f3" : "#eef2f6";
+        c.fillRect(ox + i * cs, oy + j * cs, cs - 1, cs - 1);
+        c.strokeStyle = "#b9c2cc"; c.lineWidth = 1; c.strokeRect(ox + i * cs, oy + j * cs, cs - 1, cs - 1);
+      }
+    }
+  }
+  function bars(x, y, vals, col) { vals.forEach((v, k) => { c.fillStyle = col; c.fillRect(x, y + k * 14, 8 + v * 46, 9); }); }
+  function roundRectPath(x, y, w, h, r) {
+    c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+  }
+  function pill(x, y, w, h, s, fill) {
+    c.fillStyle = fill || "#f0f3f6"; c.strokeStyle = "#c5ccd4"; c.lineWidth = 1;
+    roundRectPath(x, y, w, h, 7); c.fill(); c.stroke();
+    txt(s, x + w / 2, y + h / 2 + 4, 12.5, INK, "center");
+  }
+  function drawStrip() {
+    const xs = [80, 210, 340, 470, 600], y = 30;
+    for (let k = 0; k < 4; k++) arrow(xs[k] + 22, y, xs[k + 1] - 22, y, "#cdd4db");
+    for (let k = 0; k < 5; k++) {
+      const on = k === stage;
+      c.beginPath(); c.arc(xs[k], y, on ? 13 : 10, 0, Math.PI * 2);
+      c.fillStyle = on ? css("--accent") : "#dfe5ea"; c.fill();
+      txt(String(k + 1), xs[k], y + 4, 12, on ? "#fff" : SUB, "center");
+      txt(STRIP[k], xs[k], y + 28, 11, on ? css("--accent") : MUT, "center");
+    }
+  }
+
+  const LIT = [[1, 1], [2, 1], [1, 2], [2, 2]]; // a 2x2 fracton block
+
+  function render() {
+    c.clearRect(0, 0, W, H);
+    drawStrip();
+    if (stage === 0) {
+      grid(110, 110, 4, 26, LIT);
+      txt("cube (Z) syndrome", 162, 232, 13, SUB, "center");
+      txt("L × L × L field (one slice shown)", 162, 250, 12, MUT, "center");
+      txt("violated checks = 1 (red)", 360, 150, 13, INK);
+      txt("everything else = 0", 360, 174, 13, INK);
+      txt("the entire input —", 360, 206, 12, MUT);
+      txt("no hand-engineered features", 360, 224, 12, MUT);
+    } else if (stage === 1) {
+      grid(70, 130, 4, 20, LIT);
+      arrow(165, 170, 215, 170);
+      stack(250, 130, 4, 20, 4);
+      txt("weight-shared 3D CNN", 420, 135, 13, INK);
+      txt("width 64, depth 8", 420, 157, 12.5, SUB);
+      txt("→ feature volume [C, L, L, L]", 420, 179, 12.5, SUB);
+      txt("translation-equivariant;", 420, 207, 12, MUT);
+      txt("params independent of L;", 420, 225, 12, MUT);
+      txt("generic — no code knowledge", 420, 243, 12, MUT);
+    } else if (stage === 2) {
+      stack(70, 130, 4, 20, 4);
+      if (head === "a1") {
+        arrow(150, 215, 150, 258, GREEN); arrow(190, 215, 190, 258, GREEN); arrow(230, 215, 230, 258, GREEN);
+        txt("mean ⊕ max along axis", 195, 282, 12, GREEN, "center");
+        arrow(300, 165, 350, 165);
+        grid(370, 130, 4, 20);
+        txt("transverse map [2C, L, L]", 410, 235, 12, SUB, "center");
+        txt("pools ALONG the logical line —", 410, 285, 13, INK);
+        txt("matched to lineon structure", 410, 303, 13, INK);
+      } else {
+        arrow(180, 210, 320, 252, AMBER);
+        pill(340, 238, 80, 26, "[2C]", "#fbe7cf");
+        txt("ALL positions averaged → one vector", 410, 150, 13, AMBER, "center");
+        txt("where the evidence sat on the", 340, 290, 12.5, AMBER);
+        txt("lattice is now gone", 340, 308, 12.5, AMBER);
+      }
+    } else if (stage === 3) {
+      if (head === "a1") {
+        grid(70, 120, 4, 20);
+        txt("2D conv", 110, 222, 12, MUT, "center");
+        arrow(165, 160, 220, 160);
+        grid(250, 120, 4, 20);
+        c.fillStyle = css("--accent");
+        [[0, 0], [2, 1], [3, 3], [1, 2]].forEach((p) => { c.beginPath(); c.arc(250 + p[0] * 20 + 10, 120 + p[1] * 20 + 10, 4, 0, Math.PI * 2); c.fill(); });
+        txt("gather at (u,v)", 290, 222, 12, css("--accent"), "center");
+        arrow(345, 160, 400, 160);
+        bars(415, 120, [0.7, 0.9, 0.4, 0.95, 0.6, 0.85], GREEN);
+        txt("6L−3 per-sector logits", 415, 232, 12, SUB);
+        txt("one number per logical qubit,", 415, 258, 12.5, INK);
+        txt("read where that qubit lives", 415, 276, 12.5, INK);
+      } else {
+        pill(90, 150, 80, 28, "[2C]", "#fbe7cf");
+        arrow(180, 164, 250, 164);
+        bars(270, 159, [0.5], AMBER);
+        txt("one global guess — no (u,v) to gather", 90, 220, 12.5, AMBER);
+        txt("best it can do = the class prior", 90, 240, 12.5, AMBER);
+        txt("= the trivial 'do nothing' answer", 90, 258, 12.5, INK);
+      }
+    } else if (stage === 4) {
+      if (head === "a1") {
+        bars(70, 120, [0.7, 0.9, 0.4, 0.95, 0.6, 0.85], GREEN);
+        txt("threshold", 150, 112, 11, MUT, "center");
+        arrow(135, 150, 180, 150);
+        c.font = "15px ui-monospace, Menlo, monospace"; c.fillStyle = INK; c.textAlign = "left";
+        c.fillText("1 1 0 1 1 1", 192, 155);
+        arrow(310, 150, 358, 150);
+        pill(368, 135, 268, 30, "⊕ R(s) → recovery → apply to qubits", "#edf7ee");
+        txt("coset classification: a per-sector error = one wrong bit", 70, 232, 12.5, INK);
+        txt("result: per-sector LER 0.003 at L=10  (≈66× under trivial)", 70, 256, 13, GREEN);
+      } else {
+        bars(70, 150, [0.5], AMBER);
+        arrow(135, 154, 195, 154);
+        pill(205, 139, 230, 30, "= trivial 'do nothing'", "#fbe7cf");
+        txt("block failure 0.7342  =  trivial 0.7342", 70, 222, 13, AMBER);
+        txt("(AxisLineonHead 0.303, coord-conv 0.302)", 70, 246, 12, SUB);
+        txt("same body, same data — the head is the only change", 70, 270, 12.5, INK);
+      }
+    }
+    const cap = CAP[stage];
+    document.getElementById("pl-cap").textContent = typeof cap === "string" ? cap : cap[head];
+  }
+
+  function setStage(s) {
+    stage = Math.max(0, Math.min(4, s));
+    document.querySelectorAll("#pl-stage button").forEach((b) => b.classList.toggle("active", parseInt(b.dataset.s, 10) === stage));
+    render();
+  }
+  document.querySelectorAll("#pl-stage button").forEach((b) => b.addEventListener("click", () => setStage(parseInt(b.dataset.s, 10))));
+  document.getElementById("pl-prev").addEventListener("click", () => setStage(stage - 1));
+  document.getElementById("pl-next").addEventListener("click", () => setStage(stage + 1));
+  document.querySelectorAll("#pl-head button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#pl-head button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); head = b.dataset.h; render();
+  }));
+  render();
+})();
+
+
+/* =====================================================================
+   WIDGET 3 — Decoder scoreboard.
+
+   REAL numbers, taken verbatim from the JSON files:
+     - learned (a1), bp_osd, trivial, bw_naive: data/xcube_L346_gen.json (L<=6) +
+       data/xcube_L810_gen.json (L=8,10) -> sections.decoder_tables.*
+   Values are the 3-seed means rounded to 3 decimals for display, matching
+   Table 1 of the paper / tutorial.html (full L=3..10 curve).
+   ===================================================================== */
+(function () {
+  // [block_failure, per_sector_ler] 3-seed means.
+  const DATA = {
+    "L3_p0.03":  { learned: [0.306, 0.042], bw: [0.391, 0.098], bp: [0.372, 0.110], triv: [0.735, 0.085] },
+    "L3_p0.05":  { learned: [0.626, 0.104], bw: [0.703, 0.204], bp: [0.688, 0.228], triv: [0.887, 0.136] },
+    "L4_p0.03":  { learned: [0.343, 0.035], bw: [0.682, 0.169], bp: [0.465, 0.140], triv: [0.914, 0.110] },
+    "L4_p0.05":  { learned: [0.724, 0.110], bw: [0.937, 0.301], bp: [0.840, 0.316], triv: [0.981, 0.172] },
+    "L6_p0.03":  { learned: [0.282, 0.018], bw: [0.935, 0.242], bp: [0.595, 0.233], triv: [0.996, 0.155] },
+    "L6_p0.05":  { learned: [0.800, 0.104], bw: [0.999, 0.392], bp: [0.979, 0.451], triv: [1.000, 0.234] },
+    "L8_p0.03":  { learned: [0.194, 0.008], bw: [0.993, 0.295], bp: [0.864, 0.361], triv: [1.000, 0.195] },
+    "L8_p0.05":  { learned: [0.850, 0.095], bw: [1.000, 0.441], bp: [1.000, 0.492], triv: [1.000, 0.285] },
+    "L10_p0.03": { learned: [0.118, 0.003], bw: [1.000, 0.336], bp: [0.978, 0.427], triv: [1.000, 0.231] },
+    "L10_p0.05": { learned: [0.863, 0.080], bw: [1.000, 0.466], bp: [1.000, 0.494], triv: [1.000, 0.326] }
+  };
+  const NAMES = [
+    ["learned", "Learned", "b-learned"],
+    ["bw", "Brown–Williamson", "b-bw"],
+    ["bp", "BP+OSD-0", "b-bp"],
+    ["triv", "Trivial floor", "b-triv"]
+  ];
+
+  let L = 3, p = "0.03", metric = "per_sector"; // metric: per_sector | block
+
+  function key() { return "L" + L + "_p" + p; }
+  function metricIdx() { return metric === "block" ? 0 : 1; }
+
+  function renderBars() {
+    const cell = DATA[key()];
+    const idx = metricIdx();
+    const max = metric === "block" ? 1.0 : Math.max(0.4, ...NAMES.map((n) => cell[n[0]][idx]));
+    const host = document.getElementById("w2-bars");
+    host.innerHTML = "";
+    let bestName = "", best = Infinity;
+    NAMES.forEach((n) => { if (cell[n[0]][idx] < best) { best = cell[n[0]][idx]; bestName = n[1]; } });
+    NAMES.forEach((n) => {
+      const v = cell[n[0]][idx];
+      const row = document.createElement("div");
+      row.className = "barrow";
+      row.innerHTML =
+        '<div class="name">' + n[1] + '</div>' +
+        '<div class="bartrack"><div class="barfill ' + n[2] + '" style="width:' + (100 * v / max).toFixed(1) + '%"></div></div>' +
+        '<div class="val">' + v.toFixed(3) + '</div>';
+      host.appendChild(row);
+    });
+    const mlabel = metric === "block" ? "block failure" : "per-sector LER";
+    document.getElementById("w2-note").innerHTML =
+      "At <b>L=" + L + ", p=" + p + "</b>, lowest " + mlabel + " (best) is <b>" + bestName +
+      "</b> = " + best.toFixed(3) + ". Lower is better; the learned decoder wins every cell on both metrics.";
+  }
+
+  // trend chart: per-sector LER vs L for a fixed p
+  function renderTrend(tp) {
+    const cv = document.getElementById("w2-trend");
+    const c = cv.getContext("2d");
+    const W = cv.width, H = cv.height, padL = 56, padR = 130, padT = 18, padB = 38;
+    c.clearRect(0, 0, W, H);
+    const Ls = [3, 4, 6, 8, 10];
+    const series = [
+      ["learned", "Learned", "#2f8f46"],
+      ["bw", "Brown–Williamson", "#b06d11"],
+      ["bp", "BP+OSD-0", "#8a4fb0"],
+      ["triv", "Trivial", "#9aa3ad"]
+    ];
+    const vals = [];
+    series.forEach((s) => Ls.forEach((l) => vals.push(DATA["L" + l + "_p" + tp][s[0]][1])));
+    const ymax = Math.ceil(Math.max(...vals) * 10) / 10 || 0.1;
+    const x = (l) => padL + (Ls.indexOf(l) / (Ls.length - 1)) * (W - padL - padR);
+    const y = (v) => padT + (1 - v / ymax) * (H - padT - padB);
+
+    // axes + gridlines
+    c.strokeStyle = "#e4e8ec"; c.lineWidth = 1;
+    c.fillStyle = "#5a6572"; c.font = "12px -apple-system, sans-serif";
+    for (let i = 0; i <= 4; i++) {
+      const gv = ymax * i / 4, gy = y(gv);
+      c.beginPath(); c.moveTo(padL, gy); c.lineTo(W - padR, gy); c.stroke();
+      c.fillText(gv.toFixed(2), 12, gy + 4);
+    }
+    Ls.forEach((l) => { c.fillText("L = " + l, x(l) - 14, H - 14); });
+    c.fillText("per-sector LER", 6, 12);
+
+    series.forEach((s) => {
+      c.strokeStyle = s[2]; c.fillStyle = s[2]; c.lineWidth = s[0] === "learned" ? 3 : 2;
+      c.beginPath();
+      Ls.forEach((l, i) => {
+        const px = x(l), py = y(DATA["L" + l + "_p" + tp][s[0]][1]);
+        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+      });
+      c.stroke();
+      Ls.forEach((l) => {
+        const px = x(l), py = y(DATA["L" + l + "_p" + tp][s[0]][1]);
+        c.beginPath(); c.arc(px, py, s[0] === "learned" ? 4.5 : 3.5, 0, Math.PI * 2); c.fill();
+      });
+      // legend
+      const ly = padT + 6 + series.indexOf(s) * 18;
+      c.fillRect(W - padR + 14, ly - 8, 14, 10);
+      c.fillStyle = "#1c2126"; c.font = "12px -apple-system, sans-serif";
+      c.fillText(s[1], W - padR + 32, ly);
+    });
+  }
+
+  // wire controls
+  document.querySelectorAll("#w2-L button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#w2-L button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); L = parseInt(b.dataset.l, 10); renderBars();
+  }));
+  document.querySelectorAll("#w2-p button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#w2-p button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); p = b.dataset.p; renderBars();
+  }));
+  document.querySelectorAll("#w2-metric button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#w2-metric button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); metric = b.dataset.m; renderBars();
+  }));
+  document.querySelectorAll("#w2-trendp button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#w2-trendp button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); renderTrend(b.dataset.p);
+  }));
+
+  renderBars();
+  renderTrend("0.03");
+})();
+
+
+/* =====================================================================
+   WIDGET 4 — Noise slider at L=4.
+
+   REAL numbers (3-seed mean per-sector LER), taken verbatim:
+     - p=0.03, 0.05 cells: data/xcube_L346_gen.json -> decoder_tables.L4_p0.03 / L4_p0.05
+     - p=0.07,0.09,0.11,0.13: data/xcube_L4_psweep.json -> decoder_tables.L4_p*
+   Series: learned (a1), trivial, bp_osd.
+   ===================================================================== */
+(function () {
+  const PS = [0.03, 0.05, 0.07, 0.09, 0.11, 0.13];
+  // per-sector LER means
+  const SER = {
+    learned: [0.035, 0.110, 0.198, 0.267, 0.314, 0.350],
+    trivial: [0.110, 0.172, 0.227, 0.274, 0.315, 0.350],
+    bp:      [0.140, 0.316, 0.423, 0.465, 0.474, 0.484]
+  };
+  const NAMES = [
+    ["learned", "Learned", "b-learned", "#2f8f46"],
+    ["trivial", "Trivial floor", "b-triv", "#9aa3ad"],
+    ["bp", "BP+OSD-0", "b-bp", "#8a4fb0"]
+  ];
+  let i = 1; // default index -> p=0.05
+
+  const slider = document.getElementById("w3-slider");
+  const pval = document.getElementById("w3-pval");
+
+  function renderBars() {
+    const host = document.getElementById("w3-bars");
+    host.innerHTML = "";
+    const max = 0.5;
+    NAMES.forEach((n) => {
+      const v = SER[n[0]][i];
+      const row = document.createElement("div");
+      row.className = "barrow";
+      row.innerHTML =
+        '<div class="name">' + n[1] + '</div>' +
+        '<div class="bartrack"><div class="barfill ' + n[2] + '" style="width:' + (100 * v / max).toFixed(1) + '%"></div></div>' +
+        '<div class="val">' + v.toFixed(3) + '</div>';
+      host.appendChild(row);
+    });
+    const gap = SER.trivial[i] - SER.learned[i];
+    const cap = document.getElementById("w3-cap");
+    let verdict;
+    if (gap > 0.02) verdict = "Learned beats trivial by " + gap.toFixed(3) + " per sector — a clear win.";
+    else if (gap > 0.005) verdict = "Learned edge over trivial down to " + gap.toFixed(3) + " — narrowing.";
+    else verdict = "Learned and trivial are effectively tied (gap " + gap.toFixed(3) + ") near the ~7.5% threshold.";
+    cap.innerHTML = "At <b>p = " + PS[i].toFixed(2) + "</b>, L=4: learned per-sector LER = " +
+      SER.learned[i].toFixed(3) + ", trivial = " + SER.trivial[i].toFixed(3) +
+      ", BP+OSD-0 = " + SER.bp[i].toFixed(3) + ". " + verdict;
+  }
+
+  function renderCurve() {
+    const cv = document.getElementById("w3-curve");
+    const c = cv.getContext("2d");
+    const W = cv.width, H = cv.height, padL = 56, padR = 130, padT = 18, padB = 40;
+    c.clearRect(0, 0, W, H);
+    const ymax = 0.5;
+    const x = (k) => padL + (k / (PS.length - 1)) * (W - padL - padR);
+    const y = (v) => padT + (1 - v / ymax) * (H - padT - padB);
+
+    c.strokeStyle = "#e4e8ec"; c.lineWidth = 1; c.fillStyle = "#5a6572";
+    c.font = "12px -apple-system, sans-serif";
+    for (let g = 0; g <= 5; g++) {
+      const gv = ymax * g / 5, gy = y(gv);
+      c.beginPath(); c.moveTo(padL, gy); c.lineTo(W - padR, gy); c.stroke();
+      c.fillText(gv.toFixed(2), 12, gy + 4);
+    }
+    PS.forEach((pp, k) => c.fillText(pp.toFixed(2), x(k) - 12, H - 16));
+    c.fillText("p →", (W - padR + padL) / 2, H - 2);
+    c.fillText("per-sector LER", 6, 12);
+
+    // slider marker
+    c.strokeStyle = "#c8ccd1"; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(x(i), padT); c.lineTo(x(i), H - padB); c.stroke();
+
+    NAMES.forEach((n, si) => {
+      c.strokeStyle = n[3]; c.fillStyle = n[3]; c.lineWidth = n[0] === "learned" ? 3 : 2;
+      c.beginPath();
+      SER[n[0]].forEach((v, k) => { const px = x(k), py = y(v); if (k === 0) c.moveTo(px, py); else c.lineTo(px, py); });
+      c.stroke();
+      SER[n[0]].forEach((v, k) => { c.beginPath(); c.arc(x(k), y(v), k === i ? 5 : 3, 0, Math.PI * 2); c.fill(); });
+      const ly = padT + 6 + si * 18;
+      c.fillRect(W - padR + 14, ly - 8, 14, 10);
+      c.fillStyle = "#1c2126"; c.font = "12px -apple-system, sans-serif";
+      c.fillText(n[1], W - padR + 32, ly);
+    });
+  }
+
+  slider.addEventListener("input", () => {
+    i = parseInt(slider.value, 10);
+    pval.textContent = PS[i].toFixed(2);
+    renderBars(); renderCurve();
+  });
+
+  pval.textContent = PS[i].toFixed(2);
+  renderBars();
+  renderCurve();
+})();
+</script>
+</body>
+</html>

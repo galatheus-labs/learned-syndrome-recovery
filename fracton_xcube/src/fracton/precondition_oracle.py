@@ -23,7 +23,7 @@ KNOWN RESULTS (to reproduce / document):
     generalizes across positions a table cannot) is the right tool. The logistic
     probe here is the generalizing analog and is the honest Gate-0 reference.
 
-Run: cd parity_diffusion/internal/fracton && python3 precondition_oracle.py
+Run: cd fracton_xcube/src/fracton && python3 precondition_oracle.py
 """
 
 from __future__ import annotations

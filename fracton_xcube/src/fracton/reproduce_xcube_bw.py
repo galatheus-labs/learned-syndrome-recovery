@@ -1,7 +1,7 @@
 """Brown--Williamson (naive-weight cube-defect matching) baseline for the X-cube
 fracton code, evaluated on the SAME test split as the learned decoder and BP+OSD.
 
-This produces the BW column of Table 1 in papers/fracton_arxiv. BW is run on the
+This produces the BW column of Table 1 in the fracton paper. BW is run on the
 byte-identical test shots (sampler seed*1000+800, same n_test) used by
 reproduce_xcube_results.py, so block-failure and per-sector LER are directly
 comparable to the learned/trivial/BP+OSD numbers already in xcube_L346_gen.json.

@@ -1,6 +1,6 @@
 {
   "seed": 44,
-  "checkpoint": "/work/ablation_ckpts/compression_clean_v2_s44/ckpt_294000.pt",
+  "checkpoint": "/path/to/compression_clean_v2_s44/ckpt_294000.pt",
   "config": "configs/compression_clean_v2_s44.yaml",
   "data": "data/shapenet/val",
   "n_samples": 200,

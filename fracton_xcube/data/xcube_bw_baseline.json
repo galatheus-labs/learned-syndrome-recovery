@@ -15,7 +15,7 @@
       44
     ],
     "n_test": 40000,
-    "out": "/work/fracton_runs/xcube_bw_baseline.json"
+    "out": "data/xcube_bw_baseline.json"
   },
   "cells": {
     "L3_p0.03": {

@@ -32,7 +32,7 @@ from torch.utils.data import DataLoader, Subset
 _THIS = Path(__file__).resolve()
 _DEFAULT_PARITY_ROOT = _THIS.parent.parent.parent
 # Allow the parity_diffusion root to be overridden via env var for cluster
-# runs where this script is staged on /work but parity_diffusion lives at /app.
+# runs where this script is staged outside the source tree.
 import os as _os
 _PARITY_ROOT = Path(_os.environ.get("GALAREON_PD_ROOT", str(_DEFAULT_PARITY_ROOT)))
 if not (_PARITY_ROOT / "parity.py").exists():
@@ -61,10 +61,9 @@ from phi_prior_decoder import PhiPriorResNet3D, PhiPriorResNet3DEscape  # noqa: 
 from gauge_transporter import GaugeTransporter, LatentAutoencoder  # noqa: E402
 
 
-def load_parity_ops_workcache(n: int, cache_dir: str = "/work/parity_cache"):
-    """Same semantics as parity.load_parity_ops but caches to /work so the
-    null-space + left-inverse computation persists across pods (instead of
-    being rebuilt into the ephemeral container layer each run)."""
+def load_parity_ops_workcache(n: int, cache_dir: str = "runs/parity_cache"):
+    """Same semantics as parity.load_parity_ops but caches the null-space and
+    left-inverse computation between runs."""
     cache = Path(cache_dir)
     cache.mkdir(parents=True, exist_ok=True)
     ns_path = cache / f"nullspace_v2_true_axes_{n}.pt"
@@ -292,14 +291,14 @@ def main():
     ap.add_argument("--batch-size", type=int, default=16)
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--cube-size", type=int, default=32)
-    ap.add_argument("--train-path", default="/work/data/shapenet/train")
-    ap.add_argument("--val-path", default="/work/data/shapenet/val")
+    ap.add_argument("--train-path", default="data/shapenet/train")
+    ap.add_argument("--val-path", default="data/shapenet/val")
     ap.add_argument("--train-subset", type=int, default=0,
                     help="if >0, use only this many training samples (for fast smoke test)")
     ap.add_argument("--val-subset", type=int, default=512,
                     help="if >0, use only this many validation samples")
     ap.add_argument("--num-workers", type=int, default=4)
-    ap.add_argument("--out-dir", default="/work/gauge_paper_runs/run_default")
+    ap.add_argument("--out-dir", default="runs/gauge_paper_runs/run_default")
     ap.add_argument("--variant", choices=["both", "x_prior", "phi_prior", "phi_escape", "gauge_transporter", "latent_autoencoder"], default="both")
     ap.add_argument("--gt-base-ch", type=int, default=64,
                     help="GaugeTransporter base channel width (controls param count)")
