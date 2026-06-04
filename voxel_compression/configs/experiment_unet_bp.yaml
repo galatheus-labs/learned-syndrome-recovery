@@ -1,0 +1,39 @@
+# Two-stage pipeline: UNet (shape) → BP (parity polish)
+# Stage 1: UNet trains normally (use experiment_dct.yaml or experiment_shapes.yaml)
+# Stage 2: BP decoder trains on UNet outputs to fix remaining errors
+seed: 42
+cube_size: 32
+train:
+  epochs: 60
+  batch_size: 4
+  lr: 5e-4
+  num_layers: 6
+  base_channels: 64
+  parity_weight: 2.0
+  seed_decoder: true
+  refiner_steps: 0
+  coarse_map: true
+  dct_field: true
+  dct_keep_freqs: 4
+  nullspace_aug_prob: 0.5
+  # Two-stage: UNet + BP polish
+  bp_polish: true
+  bp_hidden_dim: 32
+  bp_iters: 8
+  val_every: 200
+diffusion:
+  T: 1000
+  schedule: cosine
+data:
+  path: data/lattices/train
+  val_path: data/lattices/val
+constraints:
+  axis_parity: true
+  diagonal_parity: false
+  subcube_2x2x2: false
+  plane_parity: true
+  global_parity: true
+logging:
+  project: parity_diffusion
+  run_name: experiment_unet_bp
+  ckpt_every: 99999

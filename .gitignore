@@ -1,0 +1,23 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# LaTeX build products
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+
+# Local training outputs and heavy artifacts
+ckpts/
+checkpoints/
+runs/
+wandb/
+*.pt
+*.pth
+*.ckpt

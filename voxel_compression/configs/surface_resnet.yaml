@@ -1,0 +1,41 @@
+# Surface-aware codec: neural decoder + BP surface refinement in training loop
+# No hard projection. Decoder learns to produce outputs that surface BP improves.
+seed: 42
+cube_size: 32
+train:
+  epochs: 10
+  batch_size: 8
+  lr: 2e-4
+  parity_weight: 0.0
+  dice_weight: 4.66
+  seed_decoder: true
+  coarse_map: true
+  coarse_size: 2
+  coarse_threshold: 0.42
+  adaptive_dct: true
+  adaptive_dct_max_freqs: 6
+  rate_weight: 0.0001
+  nullspace_aug_prob: 0.0
+  embed_weight: 0.0
+  resnet: true
+  resnet_width: 128
+  resnet_depth: 8
+  val_every: 500
+  # Disable old algebraic components
+  disable_projection: true
+  disable_x_base: true
+  disable_syndrome_cond: true
+diffusion:
+  T: 1000
+  schedule: cosine
+data:
+  path: data/shapenet/train
+  val_path: data/shapenet/val
+constraints:
+  axis_parity: true
+  plane_parity: true
+  global_parity: true
+logging:
+  project: parity_diffusion
+  run_name: surface_resnet_w128
+  ckpt_every: 2000

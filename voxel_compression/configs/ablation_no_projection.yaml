@@ -1,0 +1,36 @@
+seed: 42
+cube_size: 32
+train:
+  epochs: 5
+  batch_size: 8
+  lr: 2e-4
+  parity_weight: 2.0
+  dice_weight: 4.66
+  seed_decoder: true
+  coarse_map: true
+  coarse_size: 2
+  coarse_threshold: 0.42
+  adaptive_dct: true
+  adaptive_dct_max_freqs: 6
+  rate_weight: 0.0001
+  nullspace_aug_prob: 0.5
+  embed_weight: 1.0
+  resnet: true
+  resnet_width: 192
+  resnet_depth: 12
+  val_every: 500
+  disable_projection: true
+diffusion:
+  T: 1000
+  schedule: cosine
+data:
+  path: data/shapenet/train
+  val_path: data/shapenet/val
+constraints:
+  axis_parity: true
+  plane_parity: true
+  global_parity: true
+logging:
+  project: parity_diffusion
+  run_name: ablation_no_projection
+  ckpt_every: 2000

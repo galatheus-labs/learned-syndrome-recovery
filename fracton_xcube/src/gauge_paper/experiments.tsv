@@ -1,0 +1,54 @@
+commit	phi_iou	x_iou	delta	memory_gb	status	description
+6afade0	0.0020	0.0962	-0.0943	?	baseline	tanh-product soft-XOR, lr=2e-4, 3 epochs (smoke1b)
+bce986b	0.0042	-	-	?	keep	exp01: bilinear XOR a+b-2ab; BCE drops fast (0.46->0.09) but IoU collapses to 0 (trivial all-zero pred)
+0af8781	0.0206	-	-	?	keep	exp02: output bias init -5 breaks XOR symmetry; IoU climbs 0->0.021 monotonically over 5 epochs
+0af8781	0.0341	-	-	?	keep	exp03: 10 epochs + lr=5e-4; IoU 0.034 best at epoch 6 then plateaus, val_bce overfits past epoch 5
+0af8781	-	-	-	-	abort	exp04: full 39k train batch=32; 360s/epoch (data-loader bound), aborted; epoch 0 iou 0.001 nothing notable
+917c144	0.0011	-	-	?	discard	exp05: STE hard-XOR forward + bilinear backward; loss FLAT at 0.36 — sigmoid'(-5)~0.007 attenuates STE gradient; reverted
+d85da65	0.0721	0.4681	-0.3960	?	keep	exp06: w=96 d=8 BOTH variants, 5ep lr 5e-4; x_prior scales to 0.468, phi 0.072 — gap WIDENS at scale, x_prior was massively undersized at w=48
+9d7698c	0.0011	-	-	?	discard	exp08: phi-escape (residual_extra hatch); train_bce 0.026 (great) but val phi-only iou stuck 0.001; hatch ate all gradient, phi atrophied
+d85da65	0.1255	-	-	?	keep	exp07: phi-only 20 ep w=96 lr 5e-4; iou plateau 0.126, slope 0.004/ep at end — 80 epochs to match x=0.47 extrapolated, gap is fundamental
+a41572d	0.0893	-	-	?	keep	exp09: phi-only 5 ep w=96 + pos_weight=19; iou 0.089 vs exp06 0.072 (+23%); pos_weight helps but not transformative
+a41572d	0.2832	-	-	?	keep	exp10: phi-only 20 ep w=96 + pos_weight=19; PHASE TRANSITION at ep12 (0.13->0.21); plateau 0.283 — 60% of x_prior 0.468
+a41572d	0.2826	0.4810	-0.1984	?	keep	exp11: BOTH variants 20ep w=96 + pos_weight=19; x=0.481, phi=0.283 (59% of x_prior); confirms exp10 robustly. pos_weight gives x_prior small boost (0.468->0.481)
+a41572d	0.2760	-	-	?	discard	exp12: phi-only w=128 d=12 (12M params) + pos_weight=19; phi=0.276 — actually SLIGHTLY WORSE than 5M model exp10/11. capacity NOT the bottleneck.
+a41572d	0.2346	-	-	?	discard	exp13: phi-only w=96 + pos_weight=50; phi=0.235 — HIGHER pos_weight is WORSE. sweet spot ~19.
+a41572d	0.2907	-	-	?	keep	exp14: phi-only w=96 + pos_weight=19 + 30 epochs; phi=0.291 (+0.008 over exp10's 20ep). Plateau confirmed: slope 0.001/epoch in epochs 25-29.
+a41572d	-	-	-	-	abort	exp16: 16K train data; 635s/epoch too slow (>3hr eta), aborted; epoch 1 iou 0.048
+2ddfb0c	0.5094	-	-	?	keep	exp17: gauge_transporter (4.4M params, soft U(1) latent gauge + parallel transport); 20 ep, val_iou 0.509 — BEATS x_prior 0.481 at matched config and 75% over phi-prior plateau. THE HEADLINE RESULT.
+a41572d	0.2922	-	-	?	keep	exp15: hard phi-prior + 8K data + 25ep; final 0.292. Plateau confirmed across yet another axis. Hard fracton plateau is robust.
+2ddfb0c	0.5326	-	-	?	keep	exp18: bigger transporter (9.8M params, base_ch=96 latent_dim=48); 30ep, val_iou 0.532. +0.023 over exp17 4.4M. Soft gauge scales cleanly.
+2ddfb0c	0.4862	-	-	?	keep	exp19: 4.4M transporter + 8K train data + 20ep; val_iou 0.486 — LESS than exp17 0.509 at 2K. More data didn't help; needs more epochs at scale or transporter saturates fast.
+75ce43f	0.5177	-	-	?	keep	exp22: ABLATION — 4.4M transporter NO aux losses (no curvature/transport/latent-recon); val_iou 0.518 — slightly HIGHER than exp17 0.509 with aux. Aux losses not load-bearing; architecture alone (parallel transport on coarse latent + sharpnet upsample) is the win.
+75ce43f	-	0.4892	-	?	keep	exp20: 12M x_prior matched ResNet3D, w=128 d=12, 20ep + pos_weight=19; val_iou 0.489. x_prior saturates: only +0.008 over 5M baseline 0.481. Gap widens at scale (vs 9.8M transporter 0.532).
+75ce43f	0.5347	-	-	?	keep	exp21: 17M transporter (base_ch=128 latent_dim=64), 30ep; val_iou 0.535. Saturating: only +0.003 over 9.8M. Transporter ceiling ~0.535 at this train scale.
+75ce43f	-	0.4737	-	?	keep	exp23: 17M x_prior matched (w=160 d=12), 20ep + pos_weight=19; val_iou 0.474. WORSE than 12M x_prior 0.489 — needs more epochs perhaps. x_prior ceiling ~0.49.
+77f6dfd	0.5539	-	-	?	keep	exp25: ABLATION — drop parallel transport entirely (latent autoencoder: encoder->8^3->sharpnet, NO link/transport, 4.1M params); val_iou 0.554 — HIGHER than transporter at any scale, beats 17M x_prior by 0.08! PT actively hurts. Multi-scale autoencoder is the real win.
+77f6dfd	0.5666	-	-	?	keep	exp26: 9.2M latent autoencoder (base_ch=96 latent_dim=48), 30ep; val_iou 0.567. Confirms autoencoder scaling beats transporter scaling — autoencoder >> everything else.
+77f6dfd	0.5099	-	-	?	keep	exp24: 9.8M transporter + 8K data + 25ep; val_iou 0.510. Less than transporter+2K (0.532) — more data not helpful for transporter.
+77f6dfd	0.5764	-	-	?	keep	exp27: 16M latent autoencoder (base_ch=128 latent_dim=64), 30ep; val_iou 0.576. Scaling continues! +0.010 over 9.2M's 0.567. Autoencoder ceiling not reached.
+77f6dfd	0.5664	-	-	?	keep	exp28: 9.2M autoencoder + 8K data + 25ep; val_iou 0.566. Same as 9.2M+2K data (0.567). More data NOT helping autoencoder either.
+77f6dfd	0.5726	-	-	?	keep	exp29: 25M autoencoder (base_ch=160 latent_dim=80), 30ep; val_iou 0.573. Slightly LOWER than 16M's 0.576 — autoencoder saturating around 0.58.
+d9f0ff7	0.5424	-	-	?	keep	exp31: 3M autoencoder, 16^3 bottleneck (down_stages=1, less compression), 25ep; val_iou 0.542. Much worse — bottleneck IS load-bearing. Looser bottleneck hurts.
+d9f0ff7	0.5623	-	-	?	keep	exp30: 32M autoencoder, 4^3 bottleneck (down_stages=3, MORE compression), 25ep; val_iou 0.562. Worse than 16M@8^3 (0.576). 8^3 is sweet spot — 4^3 too tight (info loss), 16^3 too lax.
+d9f0ff7	0.5692	-	-	?	keep	exp32-s43: 16M autoencoder, seed 43 verification (vs exp27 s42=0.576). val_iou 0.569. seed variance ~0.007 — result is robust.
+d9f0ff7	0.5710	-	-	?	keep	exp32-s44: 16M autoencoder, seed 44 verification. val_iou 0.571. 3-seed mean 0.572 stdev 0.004 — result is rock-solid.
+e4ab4a1	0.8217	-	-	?	keep	exp33: 16M autoencoder + DCT level 4 side-info, 30ep; val_iou 0.822 — +0.245 over no-DCT (0.576). DCT prior dwarfs learned bottleneck. Smoothness prior thesis confirmed.
+e4ab4a1	-	0.8035	-	?	keep	exp34: 5M x_prior + DCT level 4, 30ep; val_iou 0.804. vs autoencoder+DCT4 0.822 = only 0.018 gap. With DCT, x_prior nearly matches autoencoder — architecture interchangeable when smooth prior is provided.
+e4ab4a1	0.9207	-	-	?	keep	exp36: 16M autoencoder + DCT level 6, 30ep; val_iou 0.921. vs compression paper L6=0.978 — gap -0.06 (likely 2K vs 39K data). Saturating fast.
+e4ab4a1	0.8814	-	-	?	keep	exp35: 16M autoencoder + DCT level 5, 30ep; val_iou 0.881. vs deployed L5=0.944 gap -0.06. saturated at ep15.
+e4ab4a1	0.9491	-	-	?	keep	exp37: 16M autoencoder + DCT level 7, 30ep; val_iou 0.949. vs deployed L7=0.99 gap -0.04. saturated.
+e4ab4a1	0.9318	-	-	?	keep	exp38: 16M autoencoder + DCT5 + 8K data + 20ep; val_iou 0.932. vs deployed L5=0.944 gap -0.012 (was -0.06 at 2K data). Data was the gap, not architecture.
+e4ab4a1	0.8806	-	-	?	keep	exp41: 16M autoencoder + DCT4 + 8K data + 20ep; val_iou 0.881. vs deployed L4=0.88 — MATCHES (gap +0.001).
+e4ab4a1	0.9731	-	-	?	keep	exp40: 16M autoencoder + DCT7 + 8K data + 20ep; val_iou 0.973. vs deployed L7=0.99 gap -0.017.
+qec-ae-d5	+13.2pct	-	-	?	keep	QEC autoencoder d=5 w=64 down_stages=2 (10.5M params), 30ep, p=0.003 LER 0.00306 vs MWPM 0.00353 = +13.2%. Comparable to deployed ResNet3D's reported +14%. At p=0.005/0.007 slightly worse than MWPM. Comparable but not decisive win.
+qec-ae-d7-ds2	-140pct	-	-	?	keep	QEC autoencoder d=7 w=64 down_stages=2, 30ep. CATASTROPHIC: p=0.003 LER 0.00339 vs MWPM 0.00141 = -140%. Bottleneck too aggressive — 15x15x14 -> 4x4x4 throws away too much. Sparse-voxel multi-scale prior doesn't apply to dense QEC syndromes.
+qec-ae-d9-ds2	-429pct	-	-	?	keep	QEC autoencoder d=9 w=64 down_stages=2, 30ep. CATASTROPHIC: p=0.003 LER 0.00275 vs MWPM 0.00052 = -429%. Confirms bottleneck-too-aggressive pattern at higher d.
+qec-ae-d7-ds1	+6.7pct	-	-	?	keep	QEC autoencoder d=7 w=64 down_stages=1 (less aggressive), 30ep. p=0.003 LER 0.00132 vs MWPM 0.00141 = +6.7%. Recovers vs ds=2 but still LOSES to deployed ResNet (+18-20% reported). Multi-scale architecture is compression-specific.
+qec-ae-d9-ds1	-405pct	-	-	?	keep	QEC autoencoder d=9 w=64 down_stages=1, 30ep. p=0.003 LER 0.00263 vs MWPM 0.00052 = -405%. Even less aggressive bottleneck doesn't save it. Multi-scale fails STRUCTURALLY for QEC at d>=7.
+e4ab4a1	-	0.8887	-	?	keep	exp42: 5M x_prior + DCT5 + 8K data + 20ep; val_iou 0.889. vs autoencoder+DCT5+8K = 0.932 (+0.043). Apples-to-apples at DCT5+8K shows autoencoder still outperforms x_prior but architecture gap is only 4% when both have DCT prior.
+qec-ae-d5-s43	+3.9pct	-	-	?	keep	QEC d=5 autoencoder seed 43; +3.9% over MWPM at p=0.003. Combined with s42=+13.2%, s44=-3.0%, MEAN +4.7% ±8%. Not reliably better than MWPM at d=5.
+qec-ae-d5-s44	-3.0pct	-	-	?	keep	QEC d=5 autoencoder seed 44; -3.0% over MWPM at p=0.003. Multi-seed verification — autoencoder shows high variance and is statistically tied with MWPM, BELOW deployed ResNet's reported +14%.
+exp43-s43	0.9313	-	-	?	keep	16M autoencoder + DCT5 + 8K data, seed 43. Matches s42=0.932 to 4 decimal places.
+exp43-s44	0.9298	-	-	?	keep	16M autoencoder + DCT5 + 8K data, seed 44. 3-seed mean 0.9310 stdev 0.001 — compression headline rock solid (vs QEC d=5 stdev ~8%).
+e4ab4a1	0.9569	-	-	?	keep	exp39: 16M autoencoder + DCT6 + 8K data + 20ep; val_iou 0.957. vs deployed L6=0.978 gap -0.021. RD curve complete: gap consistently 0.01-0.02 below deployed across L4-L7.
