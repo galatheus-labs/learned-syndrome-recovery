@@ -350,6 +350,43 @@ claim. Figure emitted by \texttt{make\_scaling\_figure.py} directly from the
 \label{fig:scaling}
 \end{figure}
 
+\paragraph{A threshold-crossing view.} Plotting the learned decoder's error
+against the physical rate $p$, one curve per $L$, exposes where the
+size-scaling reverses (Fig.~\ref{fig:threshold}). On the basis-invariant
+\emph{block-failure} metric the $L$-ordering inverts in a narrow band around
+$p^\star \approx 0.045$: for $p$ below it, larger $L$ gives \emph{lower} block
+failure (the sub-threshold, size-improving regime our $p=0.03$ results occupy),
+while for $p$ above it the ordering flips and larger $L$ is worse --- which is
+precisely why the $p=0.05$ block-failure rows in Table~\ref{tab:main} climb with
+$L$. This estimate is deliberately coarse: away from $L=4$ each curve is two
+operating points ($p\in\{0.03,0.05\}$) joined by linear interpolation, so
+$p^\star$ should be read as $\approx 0.04$--$0.05$ rather than a precisely
+resolved threshold, and it sits, reassuringly, near the tuned Brown--Williamson
+threshold ($\approx 4.3\%$~\cite{brown2019}) and below the optimal X-cube
+fracton-sector value ($\approx 7.5\%$~\cite{song2021}). The
+\emph{per-sector} metric, by contrast, shows no such crossing in this window:
+larger $L$ stays at or below smaller $L$ through $p=0.05$ and only loses its
+advantage near $p\approx 0.11$--$0.13$ (the $L=4$ sweep of
+\S\ref{sec:discussion}), consistent with the monotone $p=0.03$ improvement being
+a sub-threshold, basis-relative effect rather than a demonstrated code threshold.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_threshold.pdf}
+\caption{Learned-decoder LER versus physical error rate $p$, one curve per code
+size $L$ (3-seed means, seed-bootstrap $95\%$ CIs; same released JSONs as
+Table~\ref{tab:main} plus the $L=4$ high-$p$ sweep). \emph{Left}: block failure
+(basis-invariant); the $L$-curves cross in a band around $p^\star\approx0.045$
+(shaded), separating the sub-threshold regime (larger $L$ better) from the
+super-threshold regime (larger $L$ worse). \emph{Right}: per-sector LER (log
+scale, basis-relative); the curves do not cross in this window. Away from $L=4$
+each curve is a two-point linear interpolation between $p=0.03$ and $p=0.05$, so
+the crossing is a coarse estimate (see Discussion). Figure emitted by
+\texttt{make\_threshold\_figure.py} directly from the
+\texttt{reproduce\_xcube\_results.py} output JSONs.}
+\label{fig:threshold}
+\end{figure}
+
 \paragraph{Mechanism: the win is non-local.}
 Two controls localize the source of the advantage.
 \emph{(i) Ablation} (Table~\ref{tab:ablation}): replacing the
@@ -454,7 +491,15 @@ over trivial decaying smoothly with noise: a clear win through $p=0.05$
 $0.274$ at $p=0.09$, and closing to a tie by $p \approx 0.11$--$0.13$ --- so the
 useful range reaches the vicinity of the $\approx 7.5\%$ optimal
 threshold~\cite{song2021} (BP+OSD-0 is dominated throughout this range, per-sector
-LER $0.42$--$0.48$). Second, the decoder is
+LER $0.42$--$0.48$). The block-failure threshold of Fig.~\ref{fig:threshold}
+($p^\star\approx0.045$) is, correspondingly, only coarsely resolved: it rests on
+two operating points per $L$ for $L\ne4$. Sharpening it into a publication-grade
+threshold estimate requires retraining the learned decoder on a dense $p$ grid
+(e.g.\ $p\in[0.030,0.055]$ in steps of $0.005$) at every $L$ and locating the
+crossing with its finite-size scaling collapse; the released pipeline supports
+this directly (it is a wider \texttt{--ps} grid in
+\texttt{reproduce\_xcube\_results.py}), and we leave the dense sweep, together
+with an optimal-decoder reference curve, to future work. Second, the decoder is
 demonstrated on the X-cube code; transferring the line-aggregation inductive
 bias to other codes where matching also breaks down is the natural next step.
 We see a concrete, sequenced path: (i) the \emph{3D toric code} first --- it is
