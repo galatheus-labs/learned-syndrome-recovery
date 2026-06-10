@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geometry-Aware Learned Syndrome Recovery</title>
+<meta name="description" content="A four-paper research program on learned recovery from syndrome constraints: classical binary syndrome source coding, 3D voxel compression, fracton gauge structure, and topological quantum error correction.">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root {
+    --ink: #1c2126;
+    --muted: #5a6572;
+    --accent: #2b5d8a;
+    --accent-soft: #eaf2f8;
+    --warn-bg: #fdf4e6;
+    --warn-br: #e0a64a;
+    --good-bg: #edf7ee;
+    --good-br: #5aa85f;
+    --gloss-bg: #f6f7f9;
+    --line: #d8dde3;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.62;
+    font-size: 18px;
+    margin: 0;
+    background: #fbfcfd;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  h1 {
+    font-size: 32px;
+    line-height: 1.22;
+    margin: 0 0 8px;
+    letter-spacing: -0.015em;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 19px;
+    margin: 0 0 8px;
+    font-weight: 400;
+  }
+  .byline {
+    color: var(--muted);
+    font-size: 15px;
+    margin: 0 0 36px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 24px;
+  }
+  .byline a { color: var(--accent); }
+  h2 {
+    font-size: 23px;
+    margin: 52px 0 14px;
+    padding-top: 8px;
+    border-top: 2px solid var(--accent-soft);
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+  h3 { font-size: 19px; margin: 30px 0 8px; color: var(--ink); }
+  p { margin: 12px 0; }
+  a { color: var(--accent); }
+  code {
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: #eef1f4;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .aside {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 22px 0;
+    font-size: 16.5px;
+  }
+  .aside .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+  blockquote {
+    margin: 22px 0;
+    padding: 4px 0 4px 20px;
+    border-left: 4px solid var(--accent-soft);
+    color: var(--ink);
+    font-size: 19px;
+    font-style: italic;
+  }
+  .small { font-size: 15px; color: var(--muted); }
+  hr { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+
+  /* hero figure */
+  .hero {
+    margin: 26px 0 8px;
+    text-align: center;
+  }
+  .hero img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+  }
+  .figcap { font-size: 14.5px; color: var(--muted); font-style: italic; margin: 10px auto 0; max-width: 640px; }
+
+  /* paper cards */
+  .cards { display: grid; gap: 18px; margin: 24px 0; }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px 22px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card .role {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 3px 9px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 20px; }
+  .card p { margin: 6px 0 14px; font-size: 16px; color: var(--ink); }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    align-items: center;
+  }
+  .links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14.5px;
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 6px 12px;
+    background: #f6f8fa;
+    color: var(--accent);
+    transition: background 0.15s ease;
+  }
+  .links a:hover { background: #e6eef5; }
+  .links a.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .links a.primary:hover { background: #234d72; }
+  .links a.muted { color: var(--muted); }
+  .links .none {
+    font-size: 13.5px;
+    color: var(--muted);
+    font-style: italic;
+    padding: 6px 2px;
+  }
+  .ico { font-size: 13px; }
+
+  /* repro block */
+  pre {
+    background: #1c2126;
+    color: #e6edf3;
+    border-radius: 8px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 16px 0;
+  }
+  pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+  footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 14.5px;
+    color: var(--muted);
+  }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Geometry-Aware Learned Syndrome Recovery</h1>
+<p class="subtitle">A four-paper program on recovering signals from algebraic syndrome constraints &mdash; when learned proposals help, and when exact algebra hurts.</p>
+<p class="byline">
+  B.&nbsp;Guarraci, Galatheus &middot;
+  <a href="https://github.com/galatheus-labs/learned-syndrome-recovery">source repository</a> &middot;
+  preprint PDFs, interactive tutorials, and reproduction commands below
+</p>
+
+<div class="aside">
+  <span class="label">The one idea to hold onto</span>
+  A syndrome rarely specifies a single answer &mdash; it defines a large coset of feasible solutions. Exact algebraic constraints define that feasible set, but they do <em>not</em> by themselves define the right decoder. Successful learned recovery needs an architecture whose inductive bias matches the <strong>geometry</strong> of the residual uncertainty.
+</div>
+
+<div class="hero">
+  <img src="papers/figures/fracton/fig_scaling.png" alt="X-cube scaling plot: the learned AxisLineonHead decoder per-sector logical error rate improves with code size at p = 0.03, while standard baselines do not show the same scaling trend.">
+  <p class="figcap">Headline result: a structure-aware learned decoder for the X-cube fracton code. Per-sector logical error rate improves from \(L=3\) through \(L=10\) at \(p=0.03\), where generic baselines do not show the same scaling trend.</p>
+</div>
+
+<h2>Read the series</h2>
+<p>
+  Each paper studies how algebraic constraints and learned neural proposals interact on 3D lattices.
+  For the shortest path to the main result, start with the X-cube fracton paper and read the other three as
+  foundations and controls. Every paper ships a PDF and an interactive, library-free tutorial you can run in the browser.
+</p>
+
+<div class="cards">
+
+  <div class="card">
+    <span class="role">Headline result</span>
+    <h3>1. Structure-Aware Neural Decoding for the X-Cube Fracton Code</h3>
+    <p>The X-cube code has subdimensional lineon structure. An <code>AxisLineonHead</code> aggregates evidence along the logical line geometry instead of flattening the problem into a generic 3D classifier &mdash; and scales favorably with code size where matching baselines struggle.</p>
+    <div class="links">
+      <a class="primary" href="papers/fracton.pdf"><span class="ico">📄</span> Paper (PDF)</a>
+      <a href="papers/tutorials/fracton.html"><span class="ico">📘</span> Tutorial</a>
+      <a href="papers/examples/fracton_examples.html"><span class="ico">🧪</span> Interactive examples</a>
+      <a class="muted" href="https://github.com/galatheus-labs/learned-syndrome-recovery/tree/main/fracton_xcube"><span class="ico">📦</span> Code</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="role">Positive-control QEC study</span>
+    <h3>2. Sizing and Capacity Boundaries for Surface-Code QEC</h3>
+    <p>Pure spatial 3D convolutional decoders have measurable capacity knees. Multi-seed results compare classic and LC0-style residual blocks against paired MWPM across distances and physical error rates &mdash; mapping where learned decoders win, and where the capacity boundary becomes visible.</p>
+    <div class="links">
+      <a class="primary" href="papers/qec.pdf"><span class="ico">📄</span> Paper (PDF)</a>
+      <a href="papers/tutorials/qec.html"><span class="ico">📘</span> Tutorial</a>
+      <span class="none">interactive examples — not yet built</span>
+      <a class="muted" href="https://github.com/galatheus-labs/learned-syndrome-recovery/tree/main/surface_code_qec"><span class="ico">📦</span> Code</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="role">Algebraic foundation</span>
+    <h3>3. Gauge Structure and Architectural Inductive Bias</h3>
+    <p>The corrected axial-parity voxel codec has codespace \(\mathrm{image}(d_x d_y d_z)\) &mdash; a discrete \(\mathbb{Z}_2\) fracton gauge structure. But hard-coding that exact algebra into the architecture underperforms a more flexible multi-scale bottleneck prior.</p>
+    <div class="links">
+      <a class="primary" href="papers/gauge.pdf"><span class="ico">📄</span> Paper (PDF)</a>
+      <a href="papers/tutorials/gauge.html"><span class="ico">📘</span> Tutorial</a>
+      <span class="none">interactive examples — not yet built</span>
+      <a class="muted" href="https://github.com/galatheus-labs/learned-syndrome-recovery/tree/main/fracton_xcube/src/gauge_paper"><span class="ico">📦</span> Code</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="role">Classical diagnostic</span>
+    <h3>4. Constraint Locality in Learned Syndrome Decoding</h3>
+    <p>In 3D voxel compression, the useful constraints are local, overlapping, and content-aware. Targeted belief propagation and local surface checks refine a strong learned proposal, while hard high-weight global parity projections can erase the spatial information the model relies on.</p>
+    <div class="links">
+      <a class="primary" href="papers/compression.pdf"><span class="ico">📄</span> Paper (PDF)</a>
+      <a href="papers/tutorials/compression.html"><span class="ico">📘</span> Tutorial</a>
+      <span class="none">interactive examples — not yet built</span>
+      <a class="muted" href="https://github.com/galatheus-labs/learned-syndrome-recovery/tree/main/voxel_compression"><span class="ico">📦</span> Code</a>
+    </div>
+  </div>
+
+</div>
+
+<h2>The shared thesis</h2>
+<blockquote>
+  Exact algebraic constraints define the feasible set, but they do not by themselves define the right decoder. Successful learned recovery requires an architecture whose inductive bias matches the geometry of the residual uncertainty.
+</blockquote>
+<p>
+  Read conceptually, the sequence runs: gauge theorem &rarr; constraint locality &rarr; surface-code capacity &rarr; X-cube fracton decoding &mdash; from algebraic structure, to the classical learned-recovery design rule, to ordinary topological QEC, and finally to the nonlocal/subdimensional fracton case.
+</p>
+
+<h2>Reproduce the artifacts</h2>
+<p>
+  The repository contains source code, preprint PDFs, tutorials, selected figures, canonical result JSONs, and exact commands for the retained paper artifacts. Install dependencies, then run the smoke checks:
+</p>
+<pre><code>python3 -m pip install -r requirements.txt
+
+# X-cube fracton — fast structural verification
+cd fracton_xcube
+python3 reproduce_xcube_results.py --verify-only --Ls 2 3 --out /tmp/xcube_verify.json
+
+# Gauge theorem — closed-form codespace check
+python3 verify_fracton_theorem.py
+
+# Surface-code QEC — reproduce from checked-in multi-seed JSON
+cd ../surface_code_qec
+python3 reproduce_qec_results.py --results-dir data/qec_clean_knee_multiseed_json \
+  --distances 3,5,7,9,11 --seeds 42,43,44 --out /tmp/qec_reproduction.json
+
+# Voxel compression — baseline reproduction
+cd ../voxel_compression
+python3 reproduce_results.py --baselines-only --n-samples 1 --out /tmp/voxel_reproduction.json</code></pre>
+<p class="small">
+  See <a href="https://github.com/galatheus-labs/learned-syndrome-recovery/blob/main/REPRODUCIBILITY.md">REPRODUCIBILITY.md</a> for the full command map and per-module guides. Lightweight smoke/verification runs reproduce from source; paper figures and numerical summaries reproduce from canonical result JSONs; full ShapeNet-based compression and large training sweeps require external datasets and checkpoints not committed to the repo.
+</p>
+
+<footer>
+  Geometry-Aware Learned Syndrome Recovery &middot; B.&nbsp;Guarraci, Galatheus.
+  Source and issues at <a href="https://github.com/galatheus-labs/learned-syndrome-recovery">github.com/galatheus-labs/learned-syndrome-recovery</a>.
+</footer>
+
+</div>
+</body>
+</html>
