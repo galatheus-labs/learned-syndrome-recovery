@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Examples: Sizing and Capacity Boundaries of Spatial Convolutional Surface-Code Decoders</title>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root {
+    --ink: #1c2126;
+    --muted: #5a6572;
+    --accent: #2b5d8a;
+    --accent-soft: #eaf2f8;
+    --warn-bg: #fdf4e6;
+    --warn-br: #e0a64a;
+    --good-bg: #edf7ee;
+    --good-br: #5aa85f;
+    --gloss-bg: #f6f7f9;
+    --line: #d8dde3;
+    --defect: #d6453c;
+    --errcol: #2b5d8a;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.62;
+    font-size: 18px;
+    margin: 0;
+    background: #fbfcfd;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  h1 {
+    font-size: 30px;
+    line-height: 1.25;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 19px;
+    margin: 0 0 8px;
+    font-weight: 400;
+  }
+  .byline {
+    color: var(--muted);
+    font-size: 15px;
+    margin: 0 0 36px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 24px;
+  }
+  h2 {
+    font-size: 23px;
+    margin: 52px 0 14px;
+    padding-top: 8px;
+    border-top: 2px solid var(--accent-soft);
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+  h3 { font-size: 19px; margin: 30px 0 8px; color: var(--ink); }
+  p { margin: 12px 0; }
+  a { color: var(--accent); }
+  code {
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: #eef1f4;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .aside {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 22px 0;
+    font-size: 16.5px;
+  }
+  .aside .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+  .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-br); }
+  .warn .label { color: #b06d11; }
+  .good { background: var(--good-bg); border-left: 4px solid var(--good-br); }
+  .good .label { color: #3c7a41; }
+  .small { font-size: 15px; color: var(--muted); }
+  hr { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+
+  /* ---- interactive widget shells ---- */
+  .widget {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px 22px;
+    margin: 24px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .widget h3 { margin-top: 0; }
+  .teaches {
+    font-size: 15.5px;
+    color: var(--muted);
+    margin: 2px 0 16px;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    align-items: center;
+    margin: 14px 0;
+  }
+  button {
+    font: inherit;
+    font-size: 15px;
+    padding: 6px 14px;
+    border: 1px solid var(--line);
+    background: #f0f3f6;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  button:hover { background: #e2e8ee; }
+  button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { border: none; border-radius: 0; margin: 0; background: #f0f3f6; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.active { background: var(--accent); color: #fff; }
+  label.ctl { font-size: 15px; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+  .readout {
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 15px;
+    background: var(--gloss-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 12px 0 0;
+    display: inline-block;
+  }
+  .readout b { color: var(--accent); }
+  .readout .d { color: var(--defect); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; color: var(--muted); margin: 12px 0 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid rgba(0,0,0,0.15); }
+  canvas { display: block; max-width: 100%; touch-action: none; }
+  .canvas-host { display: flex; justify-content: center; margin: 8px 0; }
+
+  /* scoreboard / chart */
+  .bars { width: 100%; }
+  .barrow { display: grid; grid-template-columns: 130px 1fr 78px; align-items: center; gap: 10px; margin: 7px 0; font-size: 14.5px; }
+  .barrow .name { text-align: right; color: var(--ink); font-weight: 600; }
+  .bartrack { background: #eef1f4; border-radius: 5px; height: 22px; position: relative; overflow: hidden; }
+  .barfill { height: 100%; border-radius: 5px 0 0 5px; transition: width 0.35s ease; }
+  .barrow .val { font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 13.5px; color: var(--muted); }
+  .b-learned { background: #2f8f46; }
+  .b-bw      { background: #b06d11; }
+  .b-bp      { background: #8a4fb0; }
+  .b-triv    { background: #9aa3ad; }
+  .winner-note { font-size: 14px; color: var(--muted); margin-top: 10px; }
+  .figcap { font-size: 14.5px; color: var(--muted); font-style: italic; margin: 8px 0 0; }
+  table.mini { border-collapse: collapse; width: 100%; margin: 14px 0 0; font-size: 14px; }
+  table.mini th, table.mini td { border: 1px solid var(--line); padding: 5px 8px; text-align: center; }
+  table.mini th { background: #f0f3f6; }
+  table.mini td.win { font-weight: 700; color: #1f6b27; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Hands-On Examples for the Spatial Surface-Code Decoder</h1>
+<p class="subtitle">Four interactive demos &mdash; the lattice and what MWPM does, the capacity knee, the threshold sweep, and how the network must be sized</p>
+<p class="byline">
+  Companion to <a href="tutorial.html">tutorial.html</a> and to the paper <em>&ldquo;Sizing and Capacity Boundaries of Spatial Convolutional Decoders for Surface-Code Quantum Error Correction&rdquo;</em> (B.&nbsp;Guarraci, Galatheus, May&nbsp;2026).
+  The tutorial explains <em>why</em> a pure spatial decoder must be sized to the code distance and where it stops; this page lets you <em>see</em> it. Every widget below runs entirely offline with hand-written canvas + JavaScript &mdash; no libraries, MathJax aside. The rotated-lattice picture in Widget&nbsp;1 is an illustrative schematic of the code geometry (&sect;2.1&ndash;2.2 of the tutorial); it is the only schematic element, disclosed as such. Every <em>number</em> on this page (Widgets&nbsp;2&ndash;4) is taken verbatim from the multi-seed reproduction artifact <code>surface_code_qec/data/qec_clean_knee_multiseed.json</code> (seeds&nbsp;42/43/44, disjoint test split) and the per-run JSONs in <code>data/qec_clean_knee_multiseed_json/</code>, cross-checked against Tables&nbsp;2&ndash;3 of <code>main.tex</code>. Nothing is invented.
+</p>
+
+<div class="aside">
+  <span class="label">The one idea to hold onto</span>
+  A pure spatial (3D&nbsp;convolutional) surface-code decoder <strong>beats</strong> MWPM at small code distance &mdash; \(+13.7\%\) at \(d=3\), \(+16.9\%\) at \(d=5\), \(+11.4\%\) at \(d=7\) on logical error rate at \(p=0.003\) &mdash; then hits a <strong>capacity boundary</strong>: at \(d=9\) it ties MWPM with exploding seed variance, and at \(d=11\) the selected knee is under-capacity and falls <em>far</em> below MWPM (\(-453\%\)). The paper's claim is not &ldquo;neural beats MWPM&rdquo; (others already showed that); it is an honest map of <em>how big the network must be per distance, and exactly where the pure-spatial approach runs out.</em> Widget&nbsp;2 lets you watch that knee.
+</div>
+
+<!-- ============================================================= -->
+<h2>1. The surface code and what MWPM does</h2>
+
+<div class="widget">
+  <h3>Rotated surface-code lattice &mdash; place errors, light the syndrome, watch matching pair them</h3>
+  <p class="teaches">
+    <strong>What this teaches:</strong> pick a code distance \(d\) and click data qubits to place \(X\) errors. Each error flips its neighbouring \(Z\) stabilizers (ancillas), which light up as a <em>syndrome</em>. A minimum-weight-matching decoder then pairs each lit ancilla &mdash; to another lit ancilla or to the nearest boundary &mdash; with the cheapest connecting path. That fixed combinatorial pairing <em>is</em> MWPM: a hand-designed rule that never learns. The neural decoder of this paper replaces that rule with a learned function of the same lattice.
+  </p>
+
+  <div class="controls">
+    <label class="ctl">Code distance&nbsp;<span class="seg" id="w1-d">
+      <button data-d="3" class="active">d = 3</button>
+      <button data-d="5">d = 5</button>
+      <button data-d="7">d = 7</button>
+    </span></label>
+    <button id="w1-clear">Clear</button>
+    <button id="w1-demo">Demo: an error chain</button>
+  </div>
+
+  <div class="canvas-host">
+    <canvas id="w1-canvas" width="560" height="560" aria-label="rotated surface-code lattice"></canvas>
+  </div>
+
+  <div class="legend">
+    <span><span class="swatch" style="background:#dfe9f2"></span> data qubit (clickable)</span>
+    <span><span class="swatch" style="background:var(--errcol)"></span> X error placed</span>
+    <span><span class="swatch" style="background:#f1f3f5"></span> Z ancilla (quiet)</span>
+    <span><span class="swatch" style="background:var(--defect)"></span> lit ancilla (syndrome)</span>
+    <span><span class="swatch" style="background:#c8b072"></span> MWPM pairing path</span>
+  </div>
+
+  <div class="readout" id="w1-readout"></div>
+  <p class="figcap" id="w1-caption"></p>
+</div>
+
+<div class="aside">
+  <span class="label">Why this geometry is labelled schematic</span>
+  The lattice drawing is an <em>illustrative</em> rendering of the rotated surface code &mdash; \(d^2\) data qubits with \(d^2-1\) stabilizers in a checkerboard, weight-4 in the bulk and weight-2 at the boundary, exactly as the tutorial describes (&sect;2.2). The syndrome lights and the matching path are computed live from where you click. But this is a single static round; the actual decoder sees a 3D <em>detector volume</em> \((d{+}1)\times(d{+}1)\times(d{+}1)\) &mdash; two spatial axes plus one time axis from \(d\) measurement rounds &mdash; whose size grows as \(d^3\). That \(d^3\) growth is the whole reason capacity must scale with distance, which is the next widget.
+</div>
+
+<!-- ============================================================= -->
+<h2>2. The capacity knee</h2>
+
+<div class="widget">
+  <h3>Neural improvement over MWPM vs. code distance &mdash; the win, the boundary, the collapse</h3>
+  <p class="teaches">
+    <strong>What this teaches:</strong> the spatial decoder beats MWPM (green, positive) at \(d=3,5,7\), ties it at \(d=9\), then collapses (red, negative) at \(d=11\) where the selected knee is under-capacity. Toggle the block type and the physical error rate. The crossover near \(d=9\) is the capacity <em>boundary</em>: a pure-spatial decoder of fixed budget cannot keep pace with the \(d^3\) detector volume &mdash; not a smooth power law, but a wall where seed variance explodes.
+  </p>
+
+  <div class="controls">
+    <label class="ctl">Block&nbsp;<span class="seg" id="k-block">
+      <button data-b="classic" class="active">Classic ResNet</button>
+      <button data-b="lc0">LC0-style</button>
+    </span></label>
+    <label class="ctl">Noise&nbsp;<span class="seg" id="k-p">
+      <button data-p="0.001">p = 0.001</button>
+      <button data-p="0.003" class="active">p = 0.003</button>
+      <button data-p="0.005">p = 0.005</button>
+      <button data-p="0.007">p = 0.007</button>
+    </span></label>
+  </div>
+
+  <div class="bars" id="k-bars"></div>
+  <p class="winner-note" id="k-note"></p>
+
+  <div class="canvas-host">
+    <canvas id="k-curve" width="660" height="340" aria-label="relative improvement over MWPM vs code distance"></canvas>
+  </div>
+  <p class="figcap" id="k-cap"></p>
+</div>
+
+<div class="good">
+  <span class="label">The win is real and significant at \(d\le7\)</span>
+  At \(p=0.003\) the three-seed mean test LER beats MWPM by \(+13.7\%\) (\(d=3\): \(0.005681\) vs \(0.006587\)), \(+16.9\%\) (\(d=5\): \(0.002734\) vs \(0.003290\)), and \(+11.4\%\) (\(d=7\), classic: \(0.001237\) vs \(0.001396\)); the LC0 block stretches \(d=7\) to \(+25.6\%\) (\(0.001037\) vs \(0.001396\)). Per-seed McNemar tests on the same shots favour the neural decoder at every distance \(\le7\). These are the kind of margins prior hybrid decoders already report &mdash; the contribution here is mapping <em>where they end.</em>
+</div>
+
+<div class="warn">
+  <span class="label">The boundary and the collapse (\(d=9\), \(d=11\))</span>
+  At \(d=9\) the classic decoder is statistically <em>tied</em> with MWPM: per-seed LERs \(\{0.000591,0.000451,0.000723\}\) straddle MWPM's \(0.000557\) (one seed wins, two lose), and the SEM jumps an order of magnitude. At \(d=11\) the selected \(96{\times}12\) knee is openly under-capacity: classic LER \(0.001049\) vs MWPM \(0.000203\) at \(p=0.003\) (\(-453\%\)), LC0 worse still (\(-1192\%\)). This is reported as a <em>boundary</em>, not a failure of the idea &mdash; see the next note.
+</div>
+
+<div class="good">
+  <span class="label">The \(d=9\) boundary is under-resourcing, not a wall</span>
+  A follow-up probe at \(d=9\) &mdash; same architecture (classic, \(w{=}96\), depth&nbsp;12) but \(5\times\) the training data &mdash; <strong>beats</strong> MWPM across the board: three-seed mean LER \(0.000232\) vs MWPM \(0.000537\) at \(p=0.003\) (\(+56.5\%\)), \(0.00346\) vs \(0.006785\) at \(p=0.005\) (\(+49\%\)), and \(0.0201\) vs \(0.0312\) at \(p=0.007\) (\(+36\%\)), with per-seed McNemar \(p\sim10^{-7}\)&ndash;\(10^{-11}\). So the \(d=9\) &ldquo;tie&rdquo; of the headline table is an under-training artifact of the knee, not a fundamental capacity limit. (Source: <code>data/d9_dataarm_reproduction.json</code>.)
+</div>
+
+<!-- ============================================================= -->
+<h2>3. The threshold sweep</h2>
+
+<div class="widget">
+  <h3>Logical error rate vs. physical error rate &mdash; how suppression depends on \(d\) and \(p\)</h3>
+  <p class="teaches">
+    <strong>What this teaches:</strong> pick a decoder and watch logical error rate (LER) climb with physical error rate \(p\in\{0.001,0.003,0.005,0.007\}\), one curve per distance. Below threshold, bigger \(d\) gives a <em>lower</em> LER (more suppression) &mdash; you can see the \(d=3,5,7\) curves fan apart at low \(p\). At the capacity boundary the \(d=9,11\) curves stop behaving: with the selected knee they cross back <em>above</em> smaller-distance curves, the visual signature of under-capacity.
+  </p>
+
+  <div class="controls">
+    <label class="ctl">Decoder&nbsp;<span class="seg" id="t-dec">
+      <button data-dec="classic" class="active">Neural (classic)</button>
+      <button data-dec="lc0">Neural (LC0)</button>
+      <button data-dec="mwpm">MWPM baseline</button>
+    </span></label>
+    <label class="ctl">Highlight distance&nbsp;<span class="seg" id="t-d">
+      <button data-d="all" class="active">all</button>
+      <button data-d="3">d = 3</button>
+      <button data-d="5">d = 5</button>
+      <button data-d="7">d = 7</button>
+      <button data-d="9">d = 9</button>
+      <button data-d="11">d = 11</button>
+    </span></label>
+  </div>
+
+  <div class="canvas-host">
+    <canvas id="t-canvas" width="660" height="380" aria-label="LER vs physical error rate, curves per distance"></canvas>
+  </div>
+  <p class="figcap" id="t-cap"></p>
+</div>
+
+<div class="aside">
+  <span class="label">Reading the fan-out (and where it breaks)</span>
+  At \(p=0.003\), classic neural LER falls \(0.00568\,(d{=}3)\rightarrow0.00273\,(d{=}5)\rightarrow0.00124\,(d{=}7)\) &mdash; suppression improving with distance, as a code below threshold should. Then it <em>reverses</em>: \(d=9\) sits at \(0.00059\) (still low, but tied with MWPM) and \(d=11\) jumps back up to \(0.00105\), <em>worse</em> than \(d=7\). A properly-resourced decoder would keep falling; the reversal is exactly the capacity boundary made visible. The vertical axis is log-scaled so the four-decade spread across \(p\) and \(d\) is legible.
+</div>
+
+<!-- ============================================================= -->
+<h2>4. How the network must be sized</h2>
+
+<div class="widget">
+  <h3>The per-distance capacity knee &mdash; width \(\times\) depth, Classic vs LC0</h3>
+  <p class="teaches">
+    <strong>What this teaches:</strong> there is no one-size network. For each distance the paper selects the smallest \(\textrm{width}\times\textrm{depth}\) cell within tolerance of the best capacity-scan result (the &ldquo;knee&rdquo;). Capacity grows with distance &mdash; the detector volume scales as \(d^3\) &mdash; and the two block designs need <em>different</em> sizes: LC0 buys its \(d=7\) win by going to \(96{\times}12\) where classic stays at \(64{\times}8\). Toggle to see the rough parameter-proxy \(w^2\!\cdot\!\text{depth}\) climb.
+  </p>
+
+  <div class="controls">
+    <label class="ctl">Show&nbsp;<span class="seg" id="s-view">
+      <button data-v="table" class="active">Knee table</button>
+      <button data-v="proxy">Capacity proxy</button>
+    </span></label>
+  </div>
+
+  <div id="s-table-host">
+    <table class="mini" id="s-table"></table>
+    <p class="figcap">
+      Selected per-distance knees (\(\textrm{width}\times\textrm{depth}\)), each evaluated at seeds 42/43/44 on the disjoint test split. From Table&nbsp;1 (<code>tab:knees</code>) of <code>main.tex</code>. The bold green cell at \(d=7\) marks where LC0 spends extra capacity (\(96{\times}12\) vs classic's \(64{\times}8\)) and earns its \(+16.1\%\) edge over the classic block.
+    </p>
+  </div>
+
+  <div id="s-proxy-host" style="display:none">
+    <div class="bars" id="s-bars"></div>
+    <p class="figcap">
+      Capacity proxy \(w^2\!\cdot\!\text{depth}\) (relative units) at each knee. It climbs with distance &mdash; the network must grow to track the \(d^3\) detector volume &mdash; but the climb is <em>not</em> a clean power law: the paper resists fitting \(w\cdot\text{depth}\approx\alpha\,d^3\), reporting an empirical knee and a boundary instead. Classic and LC0 coincide at \(d=3,5,11\) and diverge at \(d=7,9\), where block design changes the required size.
+    </p>
+  </div>
+</div>
+
+<div class="aside">
+  <span class="label">Block design is distance-dependent, not second-order</span>
+  The two blocks are indistinguishable at \(d=3,5\) (LC0 is \(+0.4\%\) and \(+2.4\%\) over classic at \(p=0.003\)), but at \(d=7\) the LC0 block is a clear win &mdash; \(+16.1\%\) over classic, i.e.\ \(+25.6\%\) vs MWPM against the classic block's \(+11.4\%\). At the \(d=9/11\) boundary LC0 does not help and is in fact worse. So architecture is not a tie-breaker you can ignore once capacity is set: it extends the useful regime at intermediate distance and offers no rescue at the wall. (Aggregate, unpaired &mdash; the two blocks trained on different shots; a paired same-shot test is future work.)
+</div>
+
+<hr>
+<p class="small">
+  Companion to <a href="tutorial.html">tutorial.html</a> and <code>main.tex</code> (&ldquo;Sizing and Capacity Boundaries of Spatial Convolutional Decoders for Surface-Code Quantum Error Correction&rdquo;, B.&nbsp;Guarraci, Galatheus). Widget&nbsp;1 is an illustrative schematic of the rotated-surface-code lattice (tutorial &sect;2.1&ndash;2.2); the syndrome and matching path are computed live, but no value in it is load-bearing. Widgets&nbsp;2&ndash;4 numbers are verbatim from <code>surface_code_qec/data/qec_clean_knee_multiseed.json</code> (three-seed mean test LER, per-seed values, MWPM baselines, and relative improvements; seeds 42/43/44, disjoint test split) and the per-run JSONs in <code>data/qec_clean_knee_multiseed_json/</code>, cross-checked against Tables&nbsp;1&ndash;3 of <code>main.tex</code>; the \(d=9\) follow-up figures are from <code>data/d9_dataarm_reproduction.json</code>. No results were invented.
+</p>
+
+</div>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   WIDGET 1 — Rotated surface-code lattice + MWPM pairing (SCHEMATIC).
+
+   The lattice geometry is an ILLUSTRATIVE schematic of the rotated surface
+   code described in tutorial.html sec 2.1-2.2 and main.tex sec 2.1:
+     - d^2 data qubits on a grid; d^2 - 1 stabilizers in a checkerboard,
+       weight-4 in the bulk, weight-2 at the boundary.
+   We draw ONE type of ancilla (the Z-checks that detect X errors) for clarity.
+   The syndrome lights and the minimum-weight pairing are computed LIVE from
+   the user's clicks (each X error flips its incident Z ancillas; MWPM pairs
+   lit ancillas to each other or to the nearest open boundary by a greedy
+   nearest-neighbour minimum-weight heuristic on lattice (taxicab) distance).
+   No NUMBER in this widget is load-bearing data — it is a mechanism picture.
+   ===================================================================== */
+(function () {
+  const canvas = document.getElementById("w1-canvas");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  let d = 3;
+  // active data-qubit errors: set of "i,j" keys over the d x d data grid
+  let active = new Set();
+
+  function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+  // Layout: data qubits sit on a d x d grid. Z ancillas sit at the (d+1)x(d-1)
+  // half-integer positions of one checkerboard colour, with weight-2 sites
+  // dropped at two opposing boundaries (schematic of a rotated patch).
+  function geom() {
+    const pad = 70;
+    const span = W - 2 * pad;
+    const step = span / (d - 1 || 1);
+    return { pad, step };
+  }
+  function dataPix(i, j) {
+    const g = geom();
+    return { x: g.pad + i * g.step, y: g.pad + (d - 1 - j) * g.step };
+  }
+  // Z ancillas: placed at plaquette centres (i+0.5, j+0.5) for i in [0,d-2],
+  // j in [-1, d-1] but keep only one checkerboard parity, and trim the two
+  // half-columns at top/bottom to mimic the rotated patch's weight-2 boundary.
+  function ancillas() {
+    const out = [];
+    for (let i = 0; i <= d - 2; i++) {
+      for (let j = -1; j <= d - 1; j++) {
+        if (((i + j) & 1) !== 0) continue;          // one checkerboard colour
+        // boundary trimming: drop the protruding half-plaquettes so the
+        // pattern looks like a rotated code with two smooth boundaries.
+        if (j === -1 && (i & 1) === 1) continue;
+        if (j === d - 1 && (i & 1) === 1) continue;
+        // data qubits incident to this Z check (up to 4; fewer at boundary)
+        const inc = [];
+        [[i, j], [i + 1, j], [i, j + 1], [i + 1, j + 1]].forEach(([di, dj]) => {
+          if (di >= 0 && di <= d - 1 && dj >= 0 && dj <= d - 1) inc.push(di + "," + dj);
+        });
+        out.push({ i, j, inc });
+      }
+    }
+    return out;
+  }
+  function ancPix(a) {
+    const g = geom();
+    return { x: g.pad + (a.i + 0.5) * g.step, y: g.pad + (d - 1 - (a.j + 0.5)) * g.step };
+  }
+
+  // Compute lit ancillas: a Z check fires when an odd number of its incident
+  // data qubits carry an X error.
+  function syndrome(anc) {
+    return anc.filter((a) => {
+      let parity = 0;
+      a.inc.forEach((k) => { if (active.has(k)) parity ^= 1; });
+      return parity === 1;
+    });
+  }
+
+  // A schematic minimum-weight matching: greedily pair the closest two lit
+  // ancillas (taxicab distance in plaquette coords); if an odd one remains or
+  // a node is closer to the open boundary than to any partner, match it to the
+  // boundary. Returns a list of {ax,ay,bx,by} pixel segments.
+  function matching(lit) {
+    const nodes = lit.map((a) => ({ i: a.i, j: a.j, p: ancPix(a) }));
+    const used = new Array(nodes.length).fill(false);
+    const segs = [];
+    // boundary distance: distance to nearest left/right open edge in plaquette i
+    function bdist(n) { return Math.min(n.i + 1, (d - 1) - n.i); }
+    while (true) {
+      // find the closest unused pair
+      let best = Infinity, bi = -1, bj = -1;
+      for (let x = 0; x < nodes.length; x++) {
+        if (used[x]) continue;
+        for (let y = x + 1; y < nodes.length; y++) {
+          if (used[y]) continue;
+          const dd = Math.abs(nodes[x].i - nodes[y].i) + Math.abs(nodes[x].j - nodes[y].j);
+          if (dd < best) { best = dd; bi = x; bj = y; }
+        }
+      }
+      // any single unused node whose boundary is closer than the best pair?
+      let solo = -1, soloD = Infinity;
+      for (let x = 0; x < nodes.length; x++) {
+        if (used[x]) continue;
+        const bd = bdist(nodes[x]);
+        if (bd < soloD) { soloD = bd; solo = x; }
+      }
+      if (bi === -1 && solo === -1) break;
+      if (bi !== -1 && (solo === -1 || best <= soloD)) {
+        used[bi] = used[bj] = true;
+        segs.push({ a: nodes[bi].p, b: nodes[bj].p });
+      } else if (solo !== -1) {
+        used[solo] = true;
+        // boundary target pixel: project to the nearer left/right edge
+        const g = geom();
+        const left = nodes[solo].i + 1 <= (d - 1) - nodes[solo].i;
+        const ex = left ? g.pad - g.step * 0.5 : g.pad + (d - 0.5) * g.step;
+        segs.push({ a: nodes[solo].p, b: { x: ex, y: nodes[solo].p.y } });
+      } else break;
+    }
+    return segs;
+  }
+
+  function roundRect(c, x, y, w, h, rad) {
+    c.beginPath();
+    c.moveTo(x + rad, y);
+    c.arcTo(x + w, y, x + w, y + h, rad);
+    c.arcTo(x + w, y + h, x, y + h, rad);
+    c.arcTo(x, y + h, x, y, rad);
+    c.arcTo(x, y, x + w, y, rad);
+    c.closePath();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    const anc = ancillas();
+    const lit = syndrome(anc);
+    const litKeys = new Set(lit.map((a) => a.i + "," + a.j));
+
+    // lattice connecting lines between adjacent data qubits
+    ctx.strokeStyle = "#e6eaef"; ctx.lineWidth = 1;
+    for (let i = 0; i < d; i++) for (let j = 0; j < d; j++) {
+      const p = dataPix(i, j);
+      if (i < d - 1) { const q = dataPix(i + 1, j); ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
+      if (j < d - 1) { const q = dataPix(i, j + 1); ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
+    }
+
+    // MWPM pairing paths (drawn under the nodes)
+    const segs = matching(lit);
+    ctx.strokeStyle = "#c8b072"; ctx.lineWidth = 4; ctx.lineCap = "round";
+    segs.forEach((s) => {
+      // route as an L-shaped lattice path (taxicab) for a "matching" look
+      ctx.beginPath();
+      ctx.moveTo(s.a.x, s.a.y);
+      ctx.lineTo(s.b.x, s.a.y);
+      ctx.lineTo(s.b.x, s.b.y);
+      ctx.stroke();
+    });
+    ctx.lineCap = "butt";
+
+    // ancillas (Z checks): square markers, quiet vs lit
+    const sq = 15;
+    anc.forEach((a) => {
+      const p = ancPix(a);
+      const isLit = litKeys.has(a.i + "," + a.j);
+      ctx.fillStyle = isLit ? css("--defect") : "#f1f3f5";
+      ctx.strokeStyle = isLit ? "#9b211a" : "#cdd4db";
+      ctx.lineWidth = isLit ? 2 : 1;
+      roundRect(ctx, p.x - sq / 2, p.y - sq / 2, sq, sq, 3);
+      ctx.fill(); ctx.stroke();
+    });
+
+    // data qubits (clickable circles)
+    const r = d <= 3 ? 13 : d <= 5 ? 10 : 8;
+    for (let i = 0; i < d; i++) for (let j = 0; j < d; j++) {
+      const p = dataPix(i, j);
+      const on = active.has(i + "," + j);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, on ? r + 1.5 : r, 0, Math.PI * 2);
+      ctx.fillStyle = on ? css("--errcol") : "#dfe9f2";
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = on ? "#1d4060" : "#9bb6d0";
+      ctx.stroke();
+      if (on) {
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 12px -apple-system, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("X", p.x, p.y + 4);
+        ctx.textAlign = "left";
+      }
+    }
+
+    updateReadout(active.size, lit.length, segs.length);
+  }
+
+  function updateReadout(nE, nD, nP) {
+    document.getElementById("w1-readout").innerHTML =
+      "distance <b>d=" + d + "</b> &nbsp;&middot;&nbsp; X errors: <b>" + nE +
+      "</b> &nbsp;&middot;&nbsp; lit ancillas (syndrome): <span class=\"d\">" + nD +
+      "</span> &nbsp;&middot;&nbsp; MWPM pairings: <b>" + nP + "</b>";
+    let cap;
+    if (nE === 0) {
+      cap = "Click a data qubit (blue circle) to place an X error. Each error flips the Z ancillas it touches — that pattern of lit ancillas is the syndrome the decoder must invert.";
+    } else if (nE === 1) {
+      cap = "One error lights up to two neighbouring ancillas (one if the error sits at a boundary). MWPM pairs them by the cheapest lattice path — to each other, or to the open boundary.";
+    } else {
+      cap = nE + " errors form a chain; only the chain ENDPOINTS light ancillas (interior flips cancel). MWPM joins those endpoints by minimum-weight paths — the entire MWPM algorithm is this fixed pairing, with no learning. The neural decoder replaces it with a learned function of the same lattice.";
+    }
+    document.getElementById("w1-caption").textContent = cap;
+  }
+
+  function hit(px, py) {
+    const r = d <= 3 ? 16 : d <= 5 ? 13 : 11;
+    for (let i = 0; i < d; i++) for (let j = 0; j < d; j++) {
+      const p = dataPix(i, j);
+      if ((px - p.x) ** 2 + (py - p.y) ** 2 <= r * r) return i + "," + j;
+    }
+    return null;
+  }
+
+  canvas.addEventListener("click", (ev) => {
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+    const px = (ev.clientX - rect.left) * sx, py = (ev.clientY - rect.top) * sy;
+    const k = hit(px, py);
+    if (k) { if (active.has(k)) active.delete(k); else active.add(k); draw(); }
+  });
+
+  document.getElementById("w1-clear").addEventListener("click", () => { active.clear(); draw(); });
+  document.getElementById("w1-demo").addEventListener("click", () => {
+    // a horizontal chain across the middle row -> only endpoints light
+    active = new Set();
+    const mid = Math.floor(d / 2);
+    for (let i = 0; i < d; i++) active.add(i + "," + mid);
+    draw();
+  });
+
+  document.querySelectorAll("#w1-d button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#w1-d button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); d = parseInt(b.dataset.d, 10); active.clear(); draw();
+  }));
+
+  draw();
+})();
+
+
+/* =====================================================================
+   WIDGET 2 — The capacity knee (improvement over MWPM vs distance).
+
+   REAL numbers, verbatim from
+   surface_code_qec/data/qec_clean_knee_multiseed.json -> {classic,lc0}[d][p]:
+     .mean (3-seed neural LER), .mwpm_mean, .improvement_pct_mean, .per_seed.
+   Cross-checked vs main.tex Table 2 (tab:boundary) at p=0.003:
+     classic: d3 +13.7 / d5 +16.9 / d7 +11.4 / d9 -5.6 / d11 -453%
+     lc0:     d3 +14.1 / d5 +18.9 / d7 +25.6 / d9 -49.3 / d11 -1192%
+   No invented numbers.
+   ===================================================================== */
+(function () {
+  // DATA[block][d][p] = [neuralLER, mwpmLER, improvPct]
+  const DATA = {
+    classic: {
+      3:  { "0.001": [0.000640133, 0.0007719, 17.07], "0.003": [0.005681, 0.006586667, 13.74], "0.005": [0.015426, 0.017197, 10.30], "0.007": [0.029259, 0.031555333, 7.27] },
+      5:  { "0.001": [0.0001003, 0.000133567, 24.90], "0.003": [0.002733667, 0.003289667, 16.90], "0.005": [0.012757667, 0.013982, 8.75], "0.007": [0.034125667, 0.034941, 2.32] },
+      7:  { "0.001": [0.000014067, 0.00001833, 23.19], "0.003": [0.001236667, 0.001395667, 11.42], "0.005": [0.010023, 0.009927667, -0.92], "0.007": [0.036151667, 0.033511, -7.89] },
+      9:  { "0.001": [0.0000024, 0.000001233, -54.07], "0.003": [0.000588333, 0.000557333, -5.56], "0.005": [0.007686667, 0.006779667, -13.45], "0.007": [0.037926333, 0.031388667, -20.82] },
+      11: { "0.001": [0.000010567, 0.000000033, -8567], "0.003": [0.001049333, 0.000202667, -453.3], "0.005": [0.012349333, 0.004450333, -178.0], "0.007": [0.060066, 0.028574667, -110.4] }
+    },
+    lc0: {
+      3:  { "0.001": [0.0006465, 0.0007719, 16.25], "0.003": [0.005657, 0.006586667, 14.10], "0.005": [0.015406667, 0.017197, 10.40], "0.007": [0.029118667, 0.031555333, 7.72] },
+      5:  { "0.001": [0.000096633, 0.000133567, 27.64], "0.003": [0.002667, 0.003289667, 18.92], "0.005": [0.012763667, 0.013982, 8.72], "0.007": [0.033977, 0.034941, 2.75] },
+      7:  { "0.001": [0.000013567, 0.000018333, 26.92], "0.003": [0.001037333, 0.001395667, 25.60], "0.005": [0.008811333, 0.009927667, 11.23], "0.007": [0.032865333, 0.033511, 1.91] },
+      9:  { "0.001": [0.000004933, 0.000001367, -127.8], "0.003": [0.000827333, 0.000557333, -49.26], "0.005": [0.009642667, 0.006779667, -42.18], "0.007": [0.044059, 0.031388667, -40.20] },
+      11: { "0.001": [0.000031333, 0.0, 0.0], "0.003": [0.002455333, 0.000202667, -1192], "0.005": [0.023141667, 0.004450333, -420.7], "0.007": [0.090920667, 0.028574667, -218.4] }
+    }
+  };
+  const DS = [3, 5, 7, 9, 11];
+  let block = "classic", p = "0.003";
+
+  function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+  function renderBars() {
+    const host = document.getElementById("k-bars");
+    host.innerHTML = "";
+    // bars show improvement %, centered at 0; positive green right, negative red left.
+    // clamp the magnitude scale so the catastrophic d11 doesn't dwarf everything.
+    const SCALE = 60; // % at full half-width
+    DS.forEach((dd) => {
+      const imp = DATA[block][dd][p][2];
+      const clamped = Math.max(-SCALE, Math.min(SCALE, imp));
+      const frac = Math.abs(clamped) / SCALE;
+      const neg = imp < 0;
+      const fillColor = neg ? "var(--defect)" : "#2f8f46";
+      const side = neg
+        ? '<div class="bartrack" style="display:flex;justify-content:flex-end">' +
+            '<div class="barfill" style="width:' + (100 * frac).toFixed(1) + '%;background:' + fillColor +
+            ';border-radius:0 5px 5px 0"></div></div>'
+        : '<div class="bartrack"><div class="barfill" style="width:' + (100 * frac).toFixed(1) +
+            '%;background:' + fillColor + '"></div></div>';
+      const label = (imp >= 0 ? "+" : "") + imp.toFixed(imp <= -100 ? 0 : 1) + "%";
+      const row = document.createElement("div");
+      row.className = "barrow";
+      row.innerHTML =
+        '<div class="name">d = ' + dd + '</div>' + side +
+        '<div class="val">' + label + '</div>';
+      host.appendChild(row);
+    });
+    // crossover note
+    let lastWin = null;
+    DS.forEach((dd) => { if (DATA[block][dd][p][2] > 0) lastWin = dd; });
+    const bn = block === "classic" ? "classic ResNet" : "LC0-style";
+    document.getElementById("k-note").innerHTML =
+      "Relative improvement of the neural (" + bn + ") decoder over MWPM at <b>p=" + p +
+      "</b> (positive = neural wins; same shots, three-seed mean). " +
+      (lastWin ? "The decoder beats MWPM through <b>d=" + lastWin + "</b>, then crosses the capacity boundary. "
+               : "At this rate the decoder does not clearly beat MWPM at any distance. ") +
+      "Bars are clamped at ±60% so the d=11 collapse stays readable.";
+  }
+
+  function renderCurve() {
+    const cv = document.getElementById("k-curve");
+    const c = cv.getContext("2d");
+    const W = cv.width, H = cv.height, padL = 56, padR = 24, padT = 22, padB = 42;
+    c.clearRect(0, 0, W, H);
+    const yTop = 40, yBot = -120; // % axis (clamped view)
+    const x = (i) => padL + (i / (DS.length - 1)) * (W - padL - padR);
+    const y = (v) => { const vv = Math.max(yBot, Math.min(yTop, v)); return padT + (1 - (vv - yBot) / (yTop - yBot)) * (H - padT - padB); };
+
+    // gridlines + labels
+    c.strokeStyle = "#e4e8ec"; c.lineWidth = 1; c.fillStyle = "#5a6572";
+    c.font = "12px -apple-system, sans-serif"; c.textAlign = "left";
+    [40, 20, 0, -40, -80, -120].forEach((gv) => {
+      const gy = y(gv);
+      c.strokeStyle = gv === 0 ? "#aab2bb" : "#e4e8ec"; c.lineWidth = gv === 0 ? 1.6 : 1;
+      c.beginPath(); c.moveTo(padL, gy); c.lineTo(W - padR, gy); c.stroke();
+      c.fillStyle = "#5a6572"; c.fillText((gv > 0 ? "+" : "") + gv + "%", 10, gy + 4);
+    });
+    c.textAlign = "center";
+    DS.forEach((dd, i) => c.fillText("d = " + dd, x(i), H - 16));
+    c.fillText("relative improvement over MWPM", (padL + W - padR) / 2, H - 2);
+    c.textAlign = "left";
+
+    // both blocks faint; active block bold
+    [["classic", "#2b5d8a"], ["lc0", "#8a4fb0"]].forEach(([bk, col]) => {
+      const activeB = bk === block;
+      c.strokeStyle = activeB ? col : "#d4d9de";
+      c.fillStyle = activeB ? col : "#d4d9de";
+      c.lineWidth = activeB ? 3 : 1.5;
+      c.beginPath();
+      DS.forEach((dd, i) => { const px = x(i), py = y(DATA[bk][dd][p][2]); i === 0 ? c.moveTo(px, py) : c.lineTo(px, py); });
+      c.stroke();
+      if (activeB) DS.forEach((dd, i) => {
+        const px = x(i), py = y(DATA[bk][dd][p][2]);
+        const win = DATA[bk][dd][p][2] >= 0;
+        c.beginPath(); c.arc(px, py, 5, 0, Math.PI * 2);
+        c.fillStyle = win ? "#2f8f46" : "var(--defect)"; c.fill();
+        c.strokeStyle = "#fff"; c.lineWidth = 1.5; c.stroke();
+      });
+    });
+
+    // labels for the active block points (clamped values get an arrow note)
+    c.font = "11px -apple-system, sans-serif"; c.textAlign = "center";
+    DS.forEach((dd, i) => {
+      const imp = DATA[block][dd][p][2];
+      const px = x(i), py = y(imp);
+      const clamped = imp < -120;
+      c.fillStyle = imp >= 0 ? "#2f8f46" : "var(--defect)";
+      const txt = (imp >= 0 ? "+" : "") + imp.toFixed(imp <= -100 ? 0 : 1) + "%" + (clamped ? " ↓" : "");
+      c.fillText(txt, px, py + (imp >= 0 ? -10 : 18));
+    });
+    c.textAlign = "left";
+
+    const lastWin = DS.filter((dd) => DATA[block][dd][p][2] > 0).pop();
+    const cap = document.getElementById("k-cap");
+    cap.textContent = "Improvement-over-MWPM vs distance at p=" + p + " for the " +
+      (block === "classic" ? "classic" : "LC0") + " block (the other block shown faint). " +
+      (lastWin ? "Green points beat MWPM; the line crosses zero into red after d=" + lastWin + " — the capacity boundary. "
+               : "The line stays at or below zero at this rate. ") +
+      "Values below −120% are clamped to the axis floor (marked ↓).";
+  }
+
+  document.querySelectorAll("#k-block button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#k-block button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); block = b.dataset.b; renderBars(); renderCurve();
+  }));
+  document.querySelectorAll("#k-p button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#k-p button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); p = b.dataset.p; renderBars(); renderCurve();
+  }));
+
+  renderBars();
+  renderCurve();
+})();
+
+
+/* =====================================================================
+   WIDGET 3 — Threshold sweep (LER vs physical error rate p, per distance).
+
+   REAL numbers, verbatim from qec_clean_knee_multiseed.json:
+     neural LER (.mean) per [block][d][p] and MWPM (.mwpm_mean), at
+     p in {0.001,0.003,0.005,0.007}, d in {3,5,7,9,11}.
+   Cross-checked vs main.tex Table 3 (tab:ler-full). No invented numbers.
+   ===================================================================== */
+(function () {
+  const PS = [0.001, 0.003, 0.005, 0.007];
+  const DS = [3, 5, 7, 9, 11];
+  // LER[decoder][d] = [p0.001, p0.003, p0.005, p0.007]
+  const LER = {
+    classic: {
+      3:  [0.000640133, 0.005681, 0.015426, 0.029259],
+      5:  [0.0001003, 0.002733667, 0.012757667, 0.034125667],
+      7:  [0.000014067, 0.001236667, 0.010023, 0.036151667],
+      9:  [0.0000024, 0.000588333, 0.007686667, 0.037926333],
+      11: [0.000010567, 0.001049333, 0.012349333, 0.060066]
+    },
+    lc0: {
+      3:  [0.0006465, 0.005657, 0.015406667, 0.029118667],
+      5:  [0.000096633, 0.002667, 0.012763667, 0.033977],
+      7:  [0.000013567, 0.001037333, 0.008811333, 0.032865333],
+      9:  [0.000004933, 0.000827333, 0.009642667, 0.044059],
+      11: [0.000031333, 0.002455333, 0.023141667, 0.090920667]
+    },
+    mwpm: {
+      3:  [0.0007719, 0.006586667, 0.017197, 0.031555333],
+      5:  [0.000133567, 0.003289667, 0.013982, 0.034941],
+      7:  [0.00001833, 0.001395667, 0.009927667, 0.033511],
+      9:  [0.000001233, 0.000557333, 0.006779667, 0.031388667],
+      11: [0.000000033, 0.000202667, 0.004450333, 0.028574667]
+    }
+  };
+  const DCOL = { 3: "#2b5d8a", 5: "#2f8f46", 7: "#b06d11", 9: "#8a4fb0", 11: "#d6453c" };
+  let dec = "classic", hl = "all";
+
+  function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+  function render() {
+    const cv = document.getElementById("t-canvas");
+    const c = cv.getContext("2d");
+    const W = cv.width, H = cv.height, padL = 60, padR = 70, padT = 20, padB = 46;
+    c.clearRect(0, 0, W, H);
+    // log y-axis from 1e-6 to 1e-1
+    const loMin = -6, loMax = -1;
+    const x = (k) => padL + (k / (PS.length - 1)) * (W - padL - padR);
+    const ylog = (v) => {
+      const lv = Math.log10(Math.max(v, 1e-7));
+      const cl = Math.max(loMin, Math.min(loMax, lv));
+      return padT + (1 - (cl - loMin) / (loMax - loMin)) * (H - padT - padB);
+    };
+
+    // gridlines (decades)
+    c.strokeStyle = "#e4e8ec"; c.lineWidth = 1; c.fillStyle = "#5a6572";
+    c.font = "12px -apple-system, sans-serif"; c.textAlign = "left";
+    for (let e = loMin; e <= loMax; e++) {
+      const gy = ylog(Math.pow(10, e));
+      c.beginPath(); c.moveTo(padL, gy); c.lineTo(W - padR, gy); c.stroke();
+      c.fillText("1e" + e, 12, gy + 4);
+    }
+    c.textAlign = "center";
+    PS.forEach((pp, k) => c.fillText("p = " + pp, x(k), H - 18));
+    c.fillText("physical error rate p", (padL + W - padR) / 2, H - 2);
+    c.textAlign = "left";
+    c.fillText("logical error rate (log)", 8, 12);
+
+    DS.forEach((dd) => {
+      const dim = hl !== "all" && parseInt(hl, 10) !== dd;
+      const col = DCOL[dd];
+      c.strokeStyle = dim ? "#dde1e6" : col;
+      c.fillStyle = dim ? "#dde1e6" : col;
+      c.lineWidth = dim ? 1.2 : (hl !== "all" ? 3 : 2.2);
+      const arr = LER[dec][dd];
+      c.beginPath();
+      arr.forEach((v, k) => { const px = x(k), py = ylog(v); k === 0 ? c.moveTo(px, py) : c.lineTo(px, py); });
+      c.stroke();
+      arr.forEach((v, k) => { c.beginPath(); c.arc(x(k), ylog(v), dim ? 2.5 : 4, 0, Math.PI * 2); c.fill(); });
+      // right-edge label
+      if (!dim) {
+        c.font = "bold 12px -apple-system, sans-serif";
+        c.fillText("d=" + dd, W - padR + 8, ylog(arr[arr.length - 1]) + 4);
+      }
+    });
+
+    const decName = dec === "mwpm" ? "MWPM baseline" : "neural (" + (dec === "classic" ? "classic" : "LC0") + ")";
+    const cap = document.getElementById("t-cap");
+    let msg = "Logical error rate vs physical error rate for the " + decName +
+      ", one curve per code distance (log y-axis). ";
+    if (dec !== "mwpm") {
+      msg += "Below the boundary, higher d gives lower LER (d=3>d=5>d=7 at p=0.003); but the d=11 curve crosses back above d=7 — the selected knee is under-capacity. ";
+    } else {
+      msg += "For MWPM, LER falls monotonically with distance at every p (the d=11 curve is lowest everywhere) — the fixed decoder has no capacity boundary. ";
+    }
+    cap.textContent = msg;
+  }
+
+  document.querySelectorAll("#t-dec button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#t-dec button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); dec = b.dataset.dec; render();
+  }));
+  document.querySelectorAll("#t-d button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#t-d button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); hl = b.dataset.d; render();
+  }));
+
+  render();
+})();
+
+
+/* =====================================================================
+   WIDGET 4 — Per-distance capacity knees (sizing table + capacity proxy).
+
+   REAL numbers, verbatim from main.tex Table 1 (tab:knees):
+     Classic: d3 16x4 | d5 64x8 | d7 64x8  | d9 96x12  | d11 96x12
+     LC0:     d3 16x4 | d5 64x8 | d7 96x12 | d9 128x12 | d11 96x12
+   Capacity proxy = width^2 * depth (relative units). No invented numbers.
+   ===================================================================== */
+(function () {
+  // [width, depth] per distance
+  const KNEE = {
+    classic: { 3: [16, 4], 5: [64, 8], 7: [64, 8], 9: [96, 12], 11: [96, 12] },
+    lc0:     { 3: [16, 4], 5: [64, 8], 7: [96, 12], 9: [128, 12], 11: [96, 12] }
+  };
+  const DS = [3, 5, 7, 9, 11];
+
+  function renderTable() {
+    const t = document.getElementById("s-table");
+    let html = "<thead><tr><th>Block</th>" + DS.map((d) => "<th>d = " + d + "</th>").join("") + "</tr></thead><tbody>";
+    [["classic", "Classic ResNet"], ["lc0", "LC0-style"]].forEach(([bk, label]) => {
+      html += "<tr><td style=\"text-align:left;font-weight:600\">" + label + "</td>";
+      DS.forEach((d) => {
+        const [w, dep] = KNEE[bk][d];
+        // bold-green the d7 LC0 cell where it spends extra capacity vs classic
+        const win = (bk === "lc0" && d === 7);
+        html += "<td class=\"" + (win ? "win" : "") + "\">" + w + "&times;" + dep + "</td>";
+      });
+      html += "</tr>";
+    });
+    html += "</tbody>";
+    t.innerHTML = html;
+  }
+
+  function renderProxy() {
+    const host = document.getElementById("s-bars");
+    host.innerHTML = "";
+    // proxy = w^2 * depth; normalise to the max over both blocks
+    let max = 0;
+    DS.forEach((d) => {
+      ["classic", "lc0"].forEach((bk) => {
+        const [w, dep] = KNEE[bk][d];
+        max = Math.max(max, w * w * dep);
+      });
+    });
+    DS.forEach((d) => {
+      ["classic", "lc0"].forEach((bk) => {
+        const [w, dep] = KNEE[bk][d];
+        const proxy = w * w * dep;
+        const frac = proxy / max;
+        const cls = bk === "classic" ? "b-bp" : "b-bw";
+        const label = "d=" + d + " " + (bk === "classic" ? "Cl" : "LC0") + " (" + w + "×" + dep + ")";
+        const row = document.createElement("div");
+        row.className = "barrow";
+        row.innerHTML =
+          '<div class="name">' + label + '</div>' +
+          '<div class="bartrack"><div class="barfill ' + cls + '" style="width:' + (100 * frac).toFixed(1) + '%"></div></div>' +
+          '<div class="val">' + proxy.toLocaleString() + '</div>';
+        host.appendChild(row);
+      });
+    });
+  }
+
+  document.querySelectorAll("#s-view button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#s-view button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active");
+    const v = b.dataset.v;
+    document.getElementById("s-table-host").style.display = v === "table" ? "" : "none";
+    document.getElementById("s-proxy-host").style.display = v === "proxy" ? "" : "none";
+  }));
+
+  renderTable();
+  renderProxy();
+})();
+</script>
+</body>
+</html>

@@ -12,14 +12,14 @@ Usage (single node, for testing):
         --data-dir runs/qec_data/d9_aug --width 192 --depth 12
 
 Usage (2 nodes over 100G):
-    # On alpha (rank 0):
+    # On the rank-0 node:
     torchrun --nnodes=2 --node_rank=0 --nproc_per_node=1 \
-        --master_addr=192.168.68.232 --master_port=29500 \
+        --master_addr=<MASTER_NODE_IP> --master_port=29500 \
         qec_train_ddp.py --data-dir runs/qec_data/d9_aug
 
-    # On cpm (rank 1):
+    # On the rank-1 node:
     torchrun --nnodes=2 --node_rank=1 --nproc_per_node=1 \
-        --master_addr=192.168.68.232 --master_port=29500 \
+        --master_addr=<MASTER_NODE_IP> --master_port=29500 \
         qec_train_ddp.py --data-dir runs/qec_data/d9_aug
 """
 

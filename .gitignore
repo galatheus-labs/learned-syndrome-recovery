@@ -6,6 +6,7 @@ __pycache__/
 .ruff_cache/
 
 # LaTeX build products
+papers/src/*/main.pdf
 *.aux
 *.fdb_latexmk
 *.fls

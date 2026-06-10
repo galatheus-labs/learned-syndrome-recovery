@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Examples: Gauge Structure and Architectural Inductive Bias for Axial Parity Codes</title>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root {
+    --ink: #1c2126;
+    --muted: #5a6572;
+    --accent: #2b5d8a;
+    --accent-soft: #eaf2f8;
+    --warn-bg: #fdf4e6;
+    --warn-br: #e0a64a;
+    --good-bg: #edf7ee;
+    --good-br: #5aa85f;
+    --gloss-bg: #f6f7f9;
+    --line: #d8dde3;
+    --defect: #d6453c;
+    --errcol: #2b5d8a;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.62;
+    font-size: 18px;
+    margin: 0;
+    background: #fbfcfd;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  h1 {
+    font-size: 30px;
+    line-height: 1.25;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 19px;
+    margin: 0 0 8px;
+    font-weight: 400;
+  }
+  .byline {
+    color: var(--muted);
+    font-size: 15px;
+    margin: 0 0 36px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 24px;
+  }
+  h2 {
+    font-size: 23px;
+    margin: 52px 0 14px;
+    padding-top: 8px;
+    border-top: 2px solid var(--accent-soft);
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+  h3 { font-size: 19px; margin: 30px 0 8px; color: var(--ink); }
+  p { margin: 12px 0; }
+  a { color: var(--accent); }
+  code {
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: #eef1f4;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .aside {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 22px 0;
+    font-size: 16.5px;
+  }
+  .aside .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+  .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-br); }
+  .warn .label { color: #b06d11; }
+  .good { background: var(--good-bg); border-left: 4px solid var(--good-br); }
+  .good .label { color: #3c7a41; }
+  .small { font-size: 15px; color: var(--muted); }
+  hr { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+
+  /* ---- interactive widget shells ---- */
+  .widget {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px 22px;
+    margin: 24px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .widget h3 { margin-top: 0; }
+  .teaches {
+    font-size: 15.5px;
+    color: var(--muted);
+    margin: 2px 0 16px;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    align-items: center;
+    margin: 14px 0;
+  }
+  button {
+    font: inherit;
+    font-size: 15px;
+    padding: 6px 14px;
+    border: 1px solid var(--line);
+    background: #f0f3f6;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  button:hover { background: #e2e8ee; }
+  button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { border: none; border-radius: 0; margin: 0; background: #f0f3f6; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.active { background: var(--accent); color: #fff; }
+  label.ctl { font-size: 15px; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+  .readout {
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 15px;
+    background: var(--gloss-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 12px 0 0;
+    display: inline-block;
+  }
+  .readout b { color: var(--accent); }
+  .readout .d { color: var(--defect); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; color: var(--muted); margin: 12px 0 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid rgba(0,0,0,0.15); }
+  canvas { display: block; max-width: 100%; touch-action: none; }
+  .canvas-host { display: flex; justify-content: center; margin: 8px 0; }
+
+  /* scoreboard / chart */
+  .bars { width: 100%; }
+  .barrow { display: grid; grid-template-columns: 130px 1fr 78px; align-items: center; gap: 10px; margin: 7px 0; font-size: 14.5px; }
+  .barrow .name { text-align: right; color: var(--ink); font-weight: 600; }
+  .bartrack { background: #eef1f4; border-radius: 5px; height: 22px; position: relative; overflow: hidden; }
+  .barfill { height: 100%; border-radius: 5px 0 0 5px; transition: width 0.35s ease; }
+  .barrow .val { font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 13.5px; color: var(--muted); }
+  .b-learned { background: #2f8f46; }
+  .b-bw      { background: #b06d11; }
+  .b-bp      { background: #8a4fb0; }
+  .b-triv    { background: #9aa3ad; }
+  .winner-note { font-size: 14px; color: var(--muted); margin-top: 10px; }
+  .figcap { font-size: 14.5px; color: var(--muted); font-style: italic; margin: 8px 0 0; }
+  table.mini { border-collapse: collapse; width: 100%; margin: 14px 0 0; font-size: 14px; }
+  table.mini th, table.mini td { border: 1px solid var(--line); padding: 5px 8px; text-align: center; }
+  table.mini th { background: #f0f3f6; }
+  table.mini td.win { font-weight: 700; color: #1f6b27; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Hands-On Examples for the Axial-Parity Gauge Paper</h1>
+<p class="subtitle">Three interactive demos &mdash; the gauge theorem you can&rsquo;t break, the negative-result scoreboard, and why hard \(\mathbb{F}_2\) kills the gradient</p>
+<p class="byline">
+  Companion to <a href="tutorial.html">tutorial.html</a> and to the paper <em>&ldquo;Gauge Structure and Architectural Inductive Bias for Axial Parity Codes: A Theorem and a Negative Result&rdquo;</em> (B.&nbsp;Guarraci, Galatheus).
+  The tutorial explains <em>why</em> the codec is a discrete fracton gauge theory and why hard-coding that algebra fails; this page lets you <em>see</em> it. Every widget runs entirely offline with hand-written canvas + JavaScript &mdash; no libraries. Widget&nbsp;1&rsquo;s parity checks, the gauge transformation \(T=\partial_x\partial_y\partial_z\), and the live rank \(3n^2-3n+1\) are exactly the construction in <code>verify_fracton_theorem.py</code> (its ranks \(\{37,91,169\}\) at \(n\in\{4,6,8\}\) are machine-checked there and reproduced live below). Widgets&nbsp;2&ndash;3 take their numbers verbatim from Tables&nbsp;1&ndash;2 of <code>main.tex</code> and the run log in <code>experiments.tsv</code>. Nothing is invented.
+</p>
+
+<div class="aside">
+  <span class="label">The one idea to hold onto</span>
+  The set of voxel grids passing every parity check &mdash; the <strong>codespace</strong> &mdash; is <em>exactly</em> the image of a discrete third derivative \(\partial_x\partial_y\partial_z\) over \(\mathbb{F}_2\). That makes the codec a discrete \(\mathbb{Z}_2\) <strong>fracton gauge theory</strong>: a codeword is the &ldquo;field strength&rdquo; of a hidden potential \(\phi\), and you can XOR in any \(\partial_x\partial_y\partial_z\phi\) without moving a single parity bit (Widget&nbsp;1). <strong>And yet</strong> hard-wiring that exact algebra into a neural decoder makes it <em>worse</em>: it plateaus at IoU&nbsp;0.283 against an unconstrained baseline&rsquo;s 0.481 (Widget&nbsp;2). Widget&nbsp;3 shows the mechanism &mdash; the hard \(\mathbb{F}_2\) gate starves the gradient.
+</div>
+
+<!-- ============================================================= -->
+<h2>1. The gauge theorem you can&rsquo;t break</h2>
+
+<div class="widget">
+  <h3>Axial-parity gauge visualizer &mdash; one slice of an \(n^3\) lattice</h3>
+  <p class="teaches">
+    <strong>What this teaches:</strong> the codespace is \(\mathrm{image}(\partial_x\partial_y\partial_z)\), a fracton-like \(\mathbb{Z}_2\) gauge structure. Toggle voxels to build a field and watch the line/plane/global <em>syndrome</em> light up. Then hit <em>&ldquo;Apply gauge \(T\phi\)&rdquo;</em>: it XORs in a codeword (the third derivative of a potential), the picture changes &mdash; but <strong>every parity check stays exactly as it was</strong>. That invariance <em>is</em> the theorem. The live rank uses the closed form \(3n^2-3n+1\) for your chosen \(n\).
+  </p>
+
+  <div class="controls">
+    <label class="ctl">Lattice size&nbsp;<span class="seg" id="g1-n">
+      <button data-n="4" class="active">n = 4</button>
+      <button data-n="6">n = 6</button>
+      <button data-n="8">n = 8</button>
+    </span></label>
+    <button id="g1-clear">Clear</button>
+    <button id="g1-gauge">Apply gauge \(T\phi\) (random \(\phi\))</button>
+    <button id="g1-demo">Demo: one \(\phi\) bit &rarr; one codeword</button>
+  </div>
+
+  <div class="canvas-host">
+    <canvas id="g1-canvas" width="560" height="560" aria-label="axial parity lattice slice"></canvas>
+  </div>
+
+  <div class="legend">
+    <span><span class="swatch" style="background:#eef2f6"></span> voxel = 0</span>
+    <span><span class="swatch" style="background:var(--errcol)"></span> voxel = 1</span>
+    <span><span class="swatch" style="background:var(--defect)"></span> odd line parity (lit check)</span>
+    <span><span class="swatch" style="background:#bfe3c6"></span> even line parity (quiet)</span>
+  </div>
+
+  <div class="readout" id="g1-readout"></div>
+
+  <p class="figcap" id="g1-caption"></p>
+
+  <table class="mini" id="g1-ranktable">
+    <tr><th>quantity</th><th>this slice / lattice \(n\)</th><th>closed form</th><th>verifier (\(n\!\le\!8\))</th></tr>
+  </table>
+</div>
+
+<div class="good">
+  <span class="label">Why the syndrome never moves (the theorem in one line)</span>
+  Each parity check is the \(\mathbb{F}_2\) inner product of the field with the indicator of an axis line, plane, or the whole lattice. A gauge codeword \(T\phi=\partial_x\partial_y\partial_z\phi\) has the property that <em>every</em> such sum telescopes to \(0\bmod 2\) under the periodic boundary &mdash; each \(\phi_v\) enters an even number of times. So \(\mathrm{image}(T)\subseteq\ker H\), and a dimension count (\(\dim\,\mathrm{image}\,T = n^3-(3n^2-3n+1) = \dim\ker H\)) forces equality: \(\mathcal{C}(n)=\mathrm{image}(\partial_x\partial_y\partial_z)\). The verifier confirms it exactly at \(n\in\{4,6,8\}\): \(\mathrm{rank}(H)=\{37,91,169\}\).
+</div>
+
+<div class="warn">
+  <span class="label">The bug the theorem caught</span>
+  Closed-form rank is also a correctness check. The previously deployed parity matrix reported rank <strong>2016</strong> at \(n=32\) instead of the correct <strong>2977</strong> (\(=3\cdot1024-96+1\)). Run through the same verifier its construction gives ranks \(\{28,66,120\}\) at \(n\in\{4,6,8\}\) &mdash; strictly <em>smaller</em> than \(\{37,91,169\}\), i.e. a genuinely different, lower-rank code from a duplicate-axis indexing error. The theorem paid rent.
+</div>
+
+<!-- ============================================================= -->
+<h2>2. The negative-result scoreboard</h2>
+
+<div class="widget">
+  <h3>Unconstrained baseline vs. hard-gauge variants &mdash; the real Table&nbsp;1 / Table&nbsp;2 numbers</h3>
+  <p class="teaches">
+    <strong>What this teaches:</strong> hard-coding the exact \(\mathbb{F}_2\) gauge algebra into the architecture <em>hurts</em>. The unconstrained <span style="font-variant:small-caps">x-prior</span> ResNet3D (green) reaches val_IoU&nbsp;0.481; the best <span style="font-variant:small-caps">phi-prior</span> that enforces \(x=\partial_x\partial_y\partial_z\phi\) at every voxel plateaus at 0.283 (amber); and the degenerate hard-\(\mathbb{F}_2\) variants (tanh-product XOR, straight-through estimator, residual escape hatch) collapse to near zero. Flip the view to see the <em>best phi-prior across 14 configs</em> never escapes the \(\approx0.29\) plateau, while capacity buys the baseline nothing.
+  </p>
+
+  <div class="controls">
+    <label class="ctl">View&nbsp;<span class="seg" id="g2-view">
+      <button data-v="headline" class="active">Headline (Table 2)</button>
+      <button data-v="phisweep">Phi-prior sweep (Table 1)</button>
+      <button data-v="xscale">x-prior capacity</button>
+    </span></label>
+  </div>
+
+  <div class="bars" id="g2-bars"></div>
+  <p class="winner-note" id="g2-note"></p>
+</div>
+
+<div class="warn">
+  <span class="label">The gap is the result &mdash; not any single cell</span>
+  At <strong>matched 5.0M params and 20 epochs</strong> the only thing that changes between x-prior (0.481) and phi-prior (0.283) is the fixed output operator \(\partial_x\partial_y\partial_z\). Across <strong>14 configurations</strong> &mdash; capacity (5M = 12M), training length (20 = 30 epochs), positive-class weighting (sweet spot pos_weight = 19), and data scale (2K = 8K) &mdash; the phi-prior never clears \(\approx0.29\). And x-prior capacity saturates too: 12M gives 0.489, 17.9M gives 0.474. Capacity is not the bottleneck; the hard constraint is.
+</div>
+
+<div class="good">
+  <span class="label">For completeness: what actually wins (Table 2)</span>
+  A gauge-<em>free</em> multi-scale autoencoder (encoder \(\to 8^3\) latent \(\to\) SharpNet upsample) beats everything at <strong>0.572&nbsp;&plusmn;&nbsp;0.004</strong> over seeds \(\{42,43,44\}\). A soft U(1) transporter helps modestly (0.509), but a controlled ablation removing its gauge machinery <em>improves</em> it to 0.518 &mdash; the gauge structure is not load-bearing. The lesson: a known mathematical structure tells you <em>what is reachable</em>, not the right inductive bias.
+</div>
+
+<!-- ============================================================= -->
+<h2>3. Why hard \(\mathbb{F}_2\) collapses learning</h2>
+
+<div class="widget">
+  <h3>One gauge gate, two ways &mdash; soft relaxation vs. hard XOR / straight-through</h3>
+  <p class="teaches">
+    <strong>What this teaches:</strong> the mechanism behind the collapse. To flip a single residual bit the phi-prior must nudge a whole product of corner \(\phi\)&rsquo;s through the bilinear soft-XOR; with the output bias initialised at \(-5\) (to break XOR symmetry), the gate sits deep in saturation and its gradient is multiplicatively attenuated. The hard / straight-through estimator (STE) version is worse still &mdash; the true XOR has <em>zero</em> gradient almost everywhere. Drag the input logits and read the gradient that reaches \(\phi\): the soft path keeps a usable signal; the hard path flatlines, which is exactly why the STE and tanh-product runs land at val_IoU 0.001&ndash;0.002.
+  </p>
+
+  <div class="controls">
+    <label class="ctl">Gate&nbsp;<span class="seg" id="g3-mode">
+      <button data-m="soft" class="active">Soft bilinear XOR</button>
+      <button data-m="hard">Hard XOR / STE</button>
+    </span></label>
+    <label class="ctl">Output bias&nbsp;<span class="seg" id="g3-bias">
+      <button data-b="0">0</button>
+      <button data-b="-5" class="active">&minus;5 (paper init)</button>
+    </span></label>
+  </div>
+  <div class="controls">
+    <label class="ctl" style="width:100%;max-width:520px">
+      \(\phi_a\) logit&nbsp;<input type="range" id="g3-a" min="-6" max="6" step="0.1" value="0.6" style="flex:1">
+      <b id="g3-aval" style="font-family:monospace;color:var(--accent);min-width:42px;text-align:right">0.6</b>
+    </label>
+  </div>
+  <div class="controls">
+    <label class="ctl" style="width:100%;max-width:520px">
+      \(\phi_b\) logit&nbsp;<input type="range" id="g3-b" min="-6" max="6" step="0.1" value="-0.4" style="flex:1">
+      <b id="g3-bval" style="font-family:monospace;color:var(--accent);min-width:42px;text-align:right">-0.4</b>
+    </label>
+  </div>
+
+  <div class="canvas-host">
+    <canvas id="g3-canvas" width="660" height="340" aria-label="gradient through gauge gate"></canvas>
+  </div>
+
+  <div class="readout" id="g3-readout"></div>
+  <p class="figcap" id="g3-cap"></p>
+</div>
+
+<div class="warn">
+  <span class="label">A non-local credit-assignment problem (the paper&rsquo;s own explanation)</span>
+  The toy here uses two inputs; the real operator XORs <strong>8 corner \(\phi\)&rsquo;s</strong> per voxel. To flip one residual bit the network must simultaneously modulate all 8 &mdash; and most residual targets are 0, so BCE provides little drive. The gradient through the bilinear product is bounded by 1 but attenuated at every factor, and the STE forward/bilinear backward split (run <code>exp05</code>) left the loss flat at 0.36 because \(\sigma'(-5)\approx0.007\) crushed the passed-through gradient. Correct constraint, hostile landscape.
+</div>
+
+<hr>
+<p class="small">
+  Companion to <a href="tutorial.html">tutorial.html</a> and <code>main.tex</code>. Widget&nbsp;1&rsquo;s lattice, parity checks, gauge operator \(T=\partial_x\partial_y\partial_z\), and the closed-form rank \(3n^2-3n+1\) follow <code>verify_fracton_theorem.py</code> exactly; its machine-checked ranks \(\{37,91,169\}\) (correct) and \(\{28,66,120\}\) (the caught bug) at \(n\in\{4,6,8\}\), and the \(n=32\) value \(2977\), are reproduced verbatim. Widget&nbsp;2&rsquo;s scoreboard is Tables&nbsp;1&ndash;2 of <code>main.tex</code> (x-prior 0.481/0.489/0.474; phi-prior 0.283/0.276/0.291/0.292 and the degenerate 0.002/0.021/0.001/0.001; autoencoder \(0.572\pm0.004\); transporter 0.509/0.518) cross-checked against the per-run log in <code>fracton_xcube/src/gauge_paper/experiments.tsv</code>. Widget&nbsp;3 is a schematic of the bilinear soft-XOR vs. STE gate described in &sect;6 of <code>main.tex</code>; the &minus;5 bias init and the flat-loss STE failure are from <code>experiments.tsv</code> (<code>exp02</code>, <code>exp05</code>). No results were invented.
+</p>
+
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   WIDGET 1 — Axial-parity gauge visualizer.
+
+   GROUNDING: this is exactly the construction in verify_fracton_theorem.py.
+   - The lattice is periodic (Z/n)^3; a voxel field x : Lambda -> F_2.
+   - Parity checks: axis LINES (3n^2 of them), axis PLANES (3n), GLOBAL (1).
+     Each check is the F_2 inner product of x with a line/plane/lattice
+     indicator. The codespace C(n) = ker H, rank(H) = 3n^2 - 3n + 1.
+   - The gauge operator T = d_x d_y d_z maps a potential phi to a codeword:
+        (T phi)_v = XOR over the 8 corners {v + (a,b,c) : a,b,c in {0,1}} mod n.
+     image(T) = C(n): adding any T(phi) leaves EVERY parity check unchanged.
+
+   We render ONE z-slice of the lattice (an n x n grid of voxels at fixed z),
+   but the syndrome and gauge action are computed on the FULL n^3 lattice so
+   the invariance shown is the real theorem, not a 2D cartoon. We display the
+   IN-PLANE x-line and y-line parities for the drawn slice (the visible part of
+   the syndrome); the readout reports the full-lattice line-syndrome weight so
+   you can confirm the gauge move leaves the whole syndrome fixed.
+
+   Ranks {37,91,169} (n=4,6,8) and the buggy {28,66,120} are quoted from the
+   verifier's machine-checked output (see README / run above). 3n^2-3n+1.
+   ===================================================================== */
+(function () {
+  const canvas = document.getElementById("g1-canvas");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  let n = 4;
+  let zslice = 0;
+  // full lattice field stored as Uint8Array of length n^3, index = ((i*n)+j)*n+k
+  let field = new Uint8Array(0);
+
+  // verifier's machine-checked ranks (verify_fracton_theorem.py output)
+  const RANK_CORRECT = { 4: 37, 6: 91, 8: 169 };
+  const RANK_BUGGY   = { 4: 28, 6: 66, 8: 120 };
+
+  function idx(i, j, k) {
+    return ((((i % n) + n) % n) * n + (((j % n) + n) % n)) * n + (((k % n) + n) % n);
+  }
+
+  function alloc() {
+    field = new Uint8Array(n * n * n);
+  }
+
+  // T phi: (T phi)_v = XOR over the 8 corners v+(a,b,c) of phi
+  function applyTphi(phi) {
+    const out = new Uint8Array(n * n * n);
+    for (let i = 0; i < n; i++)
+      for (let j = 0; j < n; j++)
+        for (let k = 0; k < n; k++) {
+          let s = 0;
+          for (let a = 0; a < 2; a++)
+            for (let b = 0; b < 2; b++)
+              for (let c = 0; c < 2; c++)
+                s ^= phi[idx(i + a, j + b, k + c)];
+          out[idx(i, j, k)] = s;
+        }
+    return out;
+  }
+
+  // total LINE-syndrome weight over the FULL lattice (count of odd axis-lines)
+  function lineSyndromeWeight() {
+    let w = 0;
+    // x-lines: vary i at fixed (j,k)
+    for (let j = 0; j < n; j++) for (let k = 0; k < n; k++) {
+      let s = 0; for (let i = 0; i < n; i++) s ^= field[idx(i, j, k)]; w += s;
+    }
+    // y-lines: vary j at fixed (i,k)
+    for (let i = 0; i < n; i++) for (let k = 0; k < n; k++) {
+      let s = 0; for (let j = 0; j < n; j++) s ^= field[idx(i, j, k)]; w += s;
+    }
+    // z-lines: vary k at fixed (i,j)
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      let s = 0; for (let k = 0; k < n; k++) s ^= field[idx(i, j, k)]; w += s;
+    }
+    return w;
+  }
+  function globalParity() {
+    let s = 0; for (let v = 0; v < field.length; v++) s ^= field[v]; return s;
+  }
+  // in-plane parity of x-line at fixed (j) in this z-slice (vary i, k=zslice)
+  function xLineParityInPlane(j) { let s = 0; for (let i = 0; i < n; i++) s ^= field[idx(i, j, zslice)]; return s; }
+  function yLineParityInPlane(i) { let s = 0; for (let j = 0; j < n; j++) s ^= field[idx(i, j, zslice)]; return s; }
+  function voxelCount() { let c = 0; for (let v = 0; v < field.length; v++) c += field[v]; return c; }
+
+  // ---- layout
+  function geo() {
+    const pad = 64;
+    const cell = (W - 2 * pad) / n;
+    return { pad, cell };
+  }
+  function voxPix(i, j) {
+    const { pad, cell } = geo();
+    // i -> column (x to the right), j -> row (y up)
+    return { x: pad + i * cell, y: pad + (n - 1 - j) * cell, cell };
+  }
+
+  function getCss(v) {
+    return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  }
+  function roundRect(c, x, y, w, h, rad) {
+    c.beginPath();
+    c.moveTo(x + rad, y);
+    c.arcTo(x + w, y, x + w, y + h, rad);
+    c.arcTo(x + w, y + h, x, y + h, rad);
+    c.arcTo(x, y + h, x, y, rad);
+    c.arcTo(x, y, x + w, y, rad);
+    c.closePath();
+  }
+
+  function draw() {
+    const { pad, cell } = geo();
+    ctx.clearRect(0, 0, W, H);
+
+    // y-line parity strip (left margin), one cell per row j
+    for (let j = 0; j < n; j++) {
+      const p = voxPix(0, j);
+      const lit = yLineParityInPlane(j);
+      ctx.fillStyle = lit ? getCss("--defect") : "#bfe3c6";
+      roundRect(ctx, pad - 30, p.y + cell * 0.18, 16, cell * 0.64, 4);
+      ctx.fill();
+    }
+    // x-line parity strip (bottom margin), one cell per col i
+    for (let i = 0; i < n; i++) {
+      const p = voxPix(i, 0);
+      const lit = xLineParityInPlane(i);
+      ctx.fillStyle = lit ? getCss("--defect") : "#bfe3c6";
+      roundRect(ctx, p.x + cell * 0.18, pad + n * cell + 12, cell * 0.64, 16, 4);
+      ctx.fill();
+    }
+
+    // voxels
+    const inset = 6;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const p = voxPix(i, j);
+        const on = field[idx(i, j, zslice)] === 1;
+        ctx.fillStyle = on ? getCss("--errcol") : "#eef2f6";
+        ctx.strokeStyle = on ? "#1d4060" : "#c5ccd4";
+        ctx.lineWidth = on ? 2 : 1;
+        roundRect(ctx, p.x + inset, p.y + inset, cell - 2 * inset, cell - 2 * inset, 5);
+        ctx.fill(); ctx.stroke();
+      }
+    }
+
+    // labels
+    ctx.fillStyle = getCss("--muted");
+    ctx.font = "13px -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("x-line parity →", pad + n * cell / 2, pad + n * cell + 44);
+    ctx.save();
+    ctx.translate(pad - 44, pad + n * cell / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("← y-line parity", 0, 0);
+    ctx.restore();
+    ctx.textAlign = "left";
+    ctx.fillText("z-slice k = " + zslice + "  (of n = " + n + ")", pad - 30, pad - 28);
+
+    updateReadout();
+    updateRankTable();
+  }
+
+  function updateReadout() {
+    const lw = lineSyndromeWeight();
+    const gp = globalParity();
+    const nv = voxelCount();
+    document.getElementById("g1-readout").innerHTML =
+      "voxels = 1: <b>" + nv + "</b> &nbsp;&middot;&nbsp; full-lattice odd axis-lines: " +
+      (lw === 0 ? "<b>0</b>" : "<span class=\"d\">" + lw + "</span>") +
+      " &nbsp;&middot;&nbsp; global parity: <b>" + gp + "</b>";
+    let cap;
+    if (nv === 0) {
+      cap = "Click voxels to build a field, then press “Apply gauge Tφ”. The whole point: that operation never moves a single parity bit.";
+    } else if (lw === 0 && nv > 0) {
+      cap = "This field is a codeword: every axis-line parity is even (syndrome weight 0). It lies in the codespace C(n) = image(∂ₓ∂ᵧ∂_z). Apply another gauge Tφ and it stays a codeword.";
+    } else {
+      cap = "Syndrome weight " + lw + ". Watch it: pressing “Apply gauge Tφ” XORs in a codeword and the syndrome weight is unchanged — image(T) = ker H, the theorem.";
+    }
+    document.getElementById("g1-caption").textContent = cap;
+  }
+
+  function updateRankTable() {
+    const N = n * n * n;
+    const rankClosed = 3 * n * n - 3 * n + 1;
+    const codes = N - rankClosed;
+    const t = document.getElementById("g1-ranktable");
+    // rebuild rows below the header
+    while (t.rows.length > 1) t.deleteRow(1);
+    const rows = [
+      ["voxels \\(n^3\\)", String(N), "\\(n^3\\)", "—"],
+      ["rank \\(H\\) (independent checks)", String(rankClosed), "\\(3n^2-3n+1\\)", String(RANK_CORRECT[n])],
+      ["codespace dim \\(=\\dim\\,\\mathrm{image}\\,T\\)", String(codes), "\\(n^3-(3n^2-3n+1)\\)", String(N - RANK_CORRECT[n])],
+      ["buggy duplicate-axis rank", "—", "(lower-rank code)", String(RANK_BUGGY[n])]
+    ];
+    rows.forEach((r) => {
+      const tr = t.insertRow(-1);
+      r.forEach((cellText, ci) => {
+        const td = tr.insertCell(-1);
+        td.innerHTML = cellText;
+        if (ci === 1 || ci === 3) td.style.fontFamily = "ui-monospace, Menlo, monospace";
+      });
+    });
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([t]).catch(function () {});
+    }
+  }
+
+  // ---- interaction
+  canvas.addEventListener("click", (ev) => {
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+    const px = (ev.clientX - rect.left) * sx, py = (ev.clientY - rect.top) * sy;
+    const { pad, cell } = geo();
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const p = voxPix(i, j);
+        if (px >= p.x && px < p.x + cell && py >= p.y && py < p.y + cell) {
+          const id = idx(i, j, zslice);
+          field[id] ^= 1;
+          draw();
+          return;
+        }
+      }
+    }
+  });
+
+  document.getElementById("g1-clear").addEventListener("click", () => { alloc(); draw(); });
+
+  document.getElementById("g1-gauge").addEventListener("click", () => {
+    // random potential phi over the full lattice, XOR T(phi) into the field
+    const phi = new Uint8Array(n * n * n);
+    for (let v = 0; v < phi.length; v++) phi[v] = Math.random() < 0.5 ? 1 : 0;
+    const tphi = applyTphi(phi);
+    for (let v = 0; v < field.length; v++) field[v] ^= tphi[v];
+    draw();
+  });
+
+  document.getElementById("g1-demo").addEventListener("click", () => {
+    // single phi bit at center of this slice -> one elementary codeword T(e_v)
+    alloc();
+    const phi = new Uint8Array(n * n * n);
+    const ci = Math.floor(n / 2) - 1, cj = Math.floor(n / 2) - 1;
+    phi[idx(ci, cj, zslice)] = 1;
+    field = applyTphi(phi);
+    draw();
+  });
+
+  document.querySelectorAll("#g1-n button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#g1-n button").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      n = parseInt(btn.dataset.n, 10);
+      zslice = 0;
+      alloc();
+      draw();
+    });
+  });
+
+  alloc();
+  draw();
+})();
+
+
+/* =====================================================================
+   WIDGET 2 — The negative-result scoreboard.
+
+   REAL numbers, verbatim from main.tex Tables 1-2 and experiments.tsv:
+     x-prior:   5.0M->0.481, 12.0M->0.489, 17.9M->0.474   (Table 1)
+     phi-prior: best 0.283 (5M,pw19), 0.276 (12M), 0.291 (30ep), 0.292 (8K),
+                tanh-product XOR 0.002, bilinear+bias-5 0.021,
+                STE hard-XOR 0.001, residual escape hatch 0.001   (Table 1)
+     Table 2 headline: phi 0.283, x 0.481, transporter 0.509,
+                transporter no-aux 0.518, autoencoder 0.572 +/- 0.004.
+   ===================================================================== */
+(function () {
+  const host = document.getElementById("g2-bars");
+  const note = document.getElementById("g2-note");
+
+  // [label, value, css class]
+  const VIEWS = {
+    headline: {
+      title: "Table 2 — architecture comparison (best val_IoU)",
+      max: 0.6,
+      rows: [
+        ["multi-scale autoencoder (gauge-free, 16M)", 0.572, "b-learned"],
+        ["soft U(1) transporter, no aux (4.4M)", 0.518, "b-bp"],
+        ["soft U(1) transporter (4.4M)", 0.509, "b-bp"],
+        ["x-prior unconstrained ResNet3D (5.0M)", 0.481, "b-bw"],
+        ["phi-prior hard F₂, every voxel (5.0M)", 0.283, "b-triv"]
+      ],
+      note: "Higher val_IoU is better. The gauge-free multi-scale autoencoder wins (0.572 ± 0.004, seeds 42/43/44). " +
+            "Hard F₂ enforcement (phi-prior) is dead last at 0.283; removing the transporter's gauge machinery even " +
+            "improves it (0.509 → 0.518) — the gauge structure is not load-bearing."
+    },
+    phisweep: {
+      title: "Table 1 — phi-prior across 14 configs never escapes the ~0.29 plateau",
+      max: 0.6,
+      rows: [
+        ["x-prior baseline (5.0M, 20ep, pw19)", 0.481, "b-bw"],
+        ["phi-prior 8K train data (5.0M, 25ep)", 0.292, "b-triv"],
+        ["phi-prior 30 epochs (5.0M, pw19)", 0.291, "b-triv"],
+        ["phi-prior +pos_weight=19 (5.0M, 20ep)", 0.283, "b-triv"],
+        ["phi-prior 12M (12.0M, 20ep, pw19)", 0.276, "b-triv"],
+        ["phi-prior bilinear + bias init −5 (1.7M)", 0.021, "b-triv"],
+        ["phi-prior tanh-product XOR (1.7M, 3ep)", 0.002, "b-triv"],
+        ["phi-prior STE hard-XOR (1.7M, 10ep)", 0.001, "b-triv"],
+        ["phi-prior residual escape hatch (5.0M)", 0.001, "b-triv"]
+      ],
+      note: "Same axis, same data: only the fixed output operator ∂ₓ∂ᵧ∂_z changes. Capacity (5M=12M), " +
+            "training length (20=30ep), pos_weight (sweet spot 19), and data (2K=8K) all leave the plateau near 0.29. " +
+            "The degenerate hard-F₂ variants (tanh XOR, STE, escape hatch) collapse to 0.001–0.021."
+    },
+    xscale: {
+      title: "x-prior capacity saturates — capacity is not the bottleneck",
+      max: 0.6,
+      rows: [
+        ["x-prior 12.0M (20ep, pw19)", 0.489, "b-bw"],
+        ["x-prior 5.0M (20ep, pw19)", 0.481, "b-bw"],
+        ["x-prior 17.9M (20ep, pw19)", 0.474, "b-bw"],
+        ["best phi-prior, any config", 0.292, "b-triv"]
+      ],
+      note: "The unconstrained baseline plateaus at ≈0.48 across 5–18M params (12M barely edges 5M; 17.9M is " +
+            "actually lower). So the phi-prior's 0.28 plateau is not a capacity deficit — it is the hard constraint " +
+            "wrecking the optimization landscape."
+    }
+  };
+
+  function render(v) {
+    const view = VIEWS[v];
+    host.innerHTML = "";
+    view.rows.forEach((r) => {
+      const row = document.createElement("div");
+      row.className = "barrow";
+      row.innerHTML =
+        '<div class="name">' + r[0] + '</div>' +
+        '<div class="bartrack"><div class="barfill ' + r[2] + '" style="width:' + (100 * r[1] / view.max).toFixed(1) + '%"></div></div>' +
+        '<div class="val">' + r[1].toFixed(3) + '</div>';
+      host.appendChild(row);
+    });
+    note.innerHTML = "<b>" + view.title + ".</b> " + view.note;
+  }
+
+  document.querySelectorAll("#g2-view button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#g2-view button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active");
+    render(b.dataset.v);
+  }));
+
+  render("headline");
+})();
+
+
+/* =====================================================================
+   WIDGET 3 — Why hard F_2 collapses learning.
+
+   Schematic of the gauge gate described in main.tex sec 6 and the
+   experiments.tsv failures:
+     - SOFT: bilinear soft-XOR of two corner activations sa=sigmoid(za),
+       sb=sigmoid(zb): y = sa + sb - 2*sa*sb (the F_2 XOR's bilinear
+       relaxation). With output bias b on the logit, the emitted prob is
+       sigmoid(logit(y)+b); paper inits b=-5 to break XOR symmetry, which
+       pushes the gate into saturation and attenuates the gradient.
+     - HARD / STE: forward y = sa_bin XOR sb_bin (a step), backward via
+       bilinear surrogate. The true XOR step has zero gradient a.e.; with
+       b=-5 the passed-through gradient is further crushed by sigma'(-5)~0.007.
+   We plot |d output / d za| as za sweeps, mark the slider position, and
+   read off the gradient magnitude reaching phi. Ties to exp02 (bias -5 ->
+   0.021) and exp05 (STE -> flat loss 0.36, IoU 0.001).
+   ===================================================================== */
+(function () {
+  const cv = document.getElementById("g3-canvas");
+  const c = cv.getContext("2d");
+  const W = cv.width, H = cv.height;
+  let mode = "soft", bias = -5;
+  let za = 0.6, zb = -0.4;
+
+  const sliderA = document.getElementById("g3-a");
+  const sliderB = document.getElementById("g3-b");
+  const aval = document.getElementById("g3-aval");
+  const bval = document.getElementById("g3-bval");
+
+  const GREEN = "#2f8f46", AMBER = "#b06d11", MUT = "#9aa3ad", INK = "#1c2126", SUB = "#5a6572";
+  const ACC = "#2b5d8a";
+
+  function sig(z) { return 1 / (1 + Math.exp(-z)); }
+  function logit(p) {
+    const e = 1e-6; const q = Math.min(1 - e, Math.max(e, p));
+    return Math.log(q / (1 - q));
+  }
+
+  // soft bilinear XOR with output bias; returns emitted probability
+  function softOut(zA, zB) {
+    const sa = sig(zA), sb = sig(zB);
+    const y = sa + sb - 2 * sa * sb;       // bilinear soft-XOR in [0,1]
+    return sig(logit(y) + bias);
+  }
+  // numerical d(out)/d(zA)
+  function dSoft(zA, zB) {
+    const h = 1e-4;
+    return (softOut(zA + h, zB) - softOut(zA - h, zB)) / (2 * h);
+  }
+  // hard XOR forward (step); STE backward uses the bilinear surrogate, then
+  // the output bias' sigmoid still attenuates: grad ~ sigma'(logit(y)+bias)*surrogate
+  function hardOut(zA, zB) {
+    const ba = zA > 0 ? 1 : 0, bb = zB > 0 ? 1 : 0;
+    const y = ba ^ bb;                       // true XOR, in {0,1}
+    return sig(logit(y) + bias);
+  }
+  function dHard(zA, zB) {
+    // true forward grad is 0 a.e.; STE surrogate = bilinear grad * sigma'(out-logit)
+    const sa = sig(zA), sb = sig(zB);
+    const ySoft = sa + sb - 2 * sa * sb;
+    const surrogate = (sb === 0.5) ? (1 - 2 * sb) * sa * (1 - sa) : (1 - 2 * sb) * sa * (1 - sa);
+    const outLogit = logit(ySoft) + bias;
+    const attn = sig(outLogit) * (1 - sig(outLogit)); // sigma'(.) the bias factor crushes it
+    return surrogate * attn;
+  }
+
+  function out(zA, zB) { return mode === "soft" ? softOut(zA, zB) : hardOut(zA, zB); }
+  function grad(zA, zB) { return mode === "soft" ? dSoft(zA, zB) : dHard(zA, zB); }
+
+  function render() {
+    c.clearRect(0, 0, W, H);
+    const padL = 56, padR = 24, padT = 22, padB = 40;
+    const x0 = padL, x1 = W - padR, y0 = padT, y1 = H - padB;
+    const zmin = -6, zmax = 6;
+    const X = (z) => x0 + (z - zmin) / (zmax - zmin) * (x1 - x0);
+    // left axis = |gradient| in [0, GMAX]; show gradient curve
+    const GMAX = 0.28;
+    const Y = (g) => y1 - Math.min(g, GMAX) / GMAX * (y1 - y0);
+
+    // gridlines + y labels
+    c.strokeStyle = "#e4e8ec"; c.lineWidth = 1; c.fillStyle = SUB;
+    c.font = "12px -apple-system, sans-serif"; c.textAlign = "right";
+    for (let g = 0; g <= 4; g++) {
+      const gv = GMAX * g / 4, gy = Y(gv);
+      c.beginPath(); c.moveTo(x0, gy); c.lineTo(x1, gy); c.stroke();
+      c.fillText(gv.toFixed(2), x0 - 6, gy + 4);
+    }
+    c.textAlign = "center";
+    for (let z = -6; z <= 6; z += 2) c.fillText(z.toString(), X(z), y1 + 18);
+    c.fillText("φₐ logit zₐ  →", (x0 + x1) / 2, H - 4);
+    c.save(); c.translate(14, (y0 + y1) / 2); c.rotate(-Math.PI / 2);
+    c.fillText("| ∂ output / ∂φₐ |  (gradient reaching φ)", 0, 0); c.restore();
+
+    // gradient curve over za, holding zb at slider value
+    const col = mode === "soft" ? GREEN : AMBER;
+    c.strokeStyle = col; c.lineWidth = 3; c.beginPath();
+    let first = true;
+    for (let px = x0; px <= x1; px += 1.5) {
+      const z = zmin + (px - x0) / (x1 - x0) * (zmax - zmin);
+      const g = Math.abs(grad(z, zb));
+      const py = Y(g);
+      if (first) { c.moveTo(px, py); first = false; } else c.lineTo(px, py);
+    }
+    c.stroke();
+
+    // shade under curve faintly
+    c.globalAlpha = 0.10; c.fillStyle = col;
+    c.lineTo(x1, y1); c.lineTo(x0, y1); c.closePath(); c.fill();
+    c.globalAlpha = 1;
+
+    // slider marker
+    const gNow = Math.abs(grad(za, zb));
+    const mx = X(za), my = Y(gNow);
+    c.strokeStyle = "#c8ccd1"; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(mx, y0); c.lineTo(mx, y1); c.stroke();
+    c.fillStyle = col; c.beginPath(); c.arc(mx, my, 5, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = "#fff"; c.lineWidth = 1.5; c.stroke();
+
+    updateReadout(gNow);
+  }
+
+  function updateReadout(gNow) {
+    const o = out(za, zb);
+    document.getElementById("g3-readout").innerHTML =
+      "gate output (residual prob): <b>" + o.toFixed(4) + "</b> &nbsp;&middot;&nbsp; " +
+      "gradient to φₐ: <b" + (gNow < 0.01 ? ' class="d"' : "") + ">" + gNow.toFixed(4) + "</b>" +
+      " &nbsp;&middot;&nbsp; bias = " + bias + " &nbsp;&middot;&nbsp; " + (mode === "soft" ? "soft bilinear XOR" : "hard XOR / STE");
+    let cap;
+    if (mode === "soft" && bias === 0) {
+      cap = "Soft path, no bias offset: the bilinear XOR keeps a clean, usable gradient that peaks where the input is uncertain (z≈±1). This is the only regime where the phi-prior trains at all.";
+    } else if (mode === "soft" && bias === -5) {
+      cap = "Soft path with the paper's −5 output-bias init: the gate is shoved deep into saturation, the gradient is multiplicatively attenuated by σ'(−5)≈0.007, and the phi-prior crawls (exp02 reached only val_IoU 0.021 this way).";
+    } else if (mode === "hard") {
+      cap = "Hard XOR / straight-through: the true step has zero gradient almost everywhere; the STE surrogate that leaks through is further crushed by the −5 bias. exp05 left the BCE loss flat at 0.36 and val_IoU at 0.001 — the gradient simply cannot drive the 8-corner flip.";
+    }
+    document.getElementById("g3-cap").textContent = cap;
+  }
+
+  sliderA.addEventListener("input", () => { za = parseFloat(sliderA.value); aval.textContent = za.toFixed(1); render(); });
+  sliderB.addEventListener("input", () => { zb = parseFloat(sliderB.value); bval.textContent = zb.toFixed(1); render(); });
+  document.querySelectorAll("#g3-mode button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#g3-mode button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); mode = b.dataset.m; render();
+  }));
+  document.querySelectorAll("#g3-bias button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#g3-bias button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); bias = parseInt(b.dataset.b, 10); render();
+  }));
+
+  aval.textContent = za.toFixed(1);
+  bval.textContent = zb.toFixed(1);
+  render();
+})();
+</script>
+</body>
+</html>
