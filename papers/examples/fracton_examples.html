@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Examples: Structure-Aware Neural Decoding for the X-Cube Fracton Code</title>
+<link rel="icon" href="data:,">
 <script>
 window.MathJax = {
   tex: {
@@ -186,8 +187,8 @@ window.MathJax = {
 <h1>Hands-On Examples for the X-Cube Fracton Decoder</h1>
 <p class="subtitle">Four interactive demos you can poke at &mdash; the geometry, the decode pipeline, the scoreboard, and the noise sweep</p>
 <p class="byline">
-  Companion to <a href="tutorial.html">tutorial.html</a> and to the paper <em>&ldquo;Structure-Aware Neural Decoding for the X-Cube Fracton Code&rdquo;</em> (B.&nbsp;Guarraci, Galatheus).
-  The tutorial explains <em>why</em> fracton decoding is hard and what the paper claims; this page lets you <em>see</em> it. Every widget below runs entirely offline with hand-written canvas + JavaScript &mdash; no libraries. The geometry in Widget&nbsp;1 is derived directly from the edge&rarr;cube incidence in <code>internal/fracton/xcube_code.py</code> (the offset table is machine-checked against <code>make_xcube</code> for every edge); Widget&nbsp;2 is a schematic of the decode path described in <a href="tutorial.html">tutorial.html</a> &sect;3.2&ndash;3.3; and all numbers in Widgets&nbsp;3&ndash;4 (and the ablation figures in Widget&nbsp;2) are taken verbatim from the <code>data/</code> JSON files. Nothing is invented.
+  Companion to <a href="../tutorials/fracton.html">the tutorial</a> and to the paper <em>&ldquo;Structure-Aware Neural Decoding for the X-Cube Fracton Code&rdquo;</em> (B.&nbsp;Guarraci, Galatheus).
+  The tutorial explains <em>why</em> fracton decoding is hard and what the paper claims; this page lets you <em>see</em> it. Every widget below runs entirely offline with hand-written canvas + JavaScript &mdash; no libraries. The geometry in Widget&nbsp;1 is derived directly from the edge&rarr;cube incidence in <code>internal/fracton/xcube_code.py</code> (the offset table is machine-checked against <code>make_xcube</code> for every edge); Widget&nbsp;2 is a schematic of the decode path described in <a href="../tutorials/fracton.html">the tutorial</a> &sect;3.2&ndash;3.3; and all numbers in Widgets&nbsp;3&ndash;4 (and the ablation figures in Widget&nbsp;2) are taken verbatim from the <code>data/</code> JSON files. Nothing is invented.
 </p>
 
 <div class="aside">
@@ -366,7 +367,7 @@ window.MathJax = {
 
 <hr>
 <p class="small">
-  Companion to <a href="tutorial.html">tutorial.html</a> and <code>main.tex</code>. Widget&nbsp;1 geometry is derived from <code>internal/fracton/xcube_code.py</code> (offset table machine-verified against <code>make_xcube</code> for every edge and axis). Widget&nbsp;2 is a schematic of the decode pipeline (&sect;3.2&ndash;3.3 of the tutorial); its ablation figures (0.7342 / 0.303 / 0.302) come from <code>data/xcube_L346_gen.json</code> &rarr; <code>sections.ablation</code>. Widget&nbsp;3&ndash;4 numbers are taken verbatim from <code>data/xcube_L346_gen.json</code>, <code>data/xcube_L810_gen.json</code>, <code>data/xcube_L4_psweep.json</code>, and <code>data/xcube_bw_baseline.json</code> per <code>REPRODUCIBILITY.md</code>. No results were invented.
+  Companion to <a href="../tutorials/fracton.html">the tutorial</a> and <code>main.tex</code>. Widget&nbsp;1 geometry is derived from <code>internal/fracton/xcube_code.py</code> (offset table machine-verified against <code>make_xcube</code> for every edge and axis). Widget&nbsp;2 is a schematic of the decode pipeline (&sect;3.2&ndash;3.3 of the tutorial); its ablation figures (0.7342 / 0.303 / 0.302) come from <code>data/xcube_L346_gen.json</code> &rarr; <code>sections.ablation</code>. Widget&nbsp;3&ndash;4 numbers are taken verbatim from <code>data/xcube_L346_gen.json</code>, <code>data/xcube_L810_gen.json</code>, <code>data/xcube_L4_psweep.json</code>, and <code>data/xcube_bw_baseline.json</code> per <code>REPRODUCIBILITY.md</code>. No results were invented.
 </p>
 
 </div>

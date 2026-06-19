@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Geometry-Aware Learned Syndrome Recovery</title>
 <meta name="description" content="A four-paper research program on learned recovery from syndrome constraints: classical binary syndrome source coding, 3D voxel compression, fracton gauge structure, and topological quantum error correction.">
+<link rel="icon" href="data:,">
 <script>
 window.MathJax = {
   tex: {
@@ -28,6 +29,7 @@ window.MathJax = {
     --gloss-bg: #f6f7f9;
     --line: #d8dde3;
   }
+  *, *::before, *::after { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -57,7 +59,7 @@ window.MathJax = {
   .byline {
     color: var(--muted);
     font-size: 15px;
-    margin: 0 0 36px;
+    margin: 0 0 24px;
     border-bottom: 1px solid var(--line);
     padding-bottom: 24px;
   }
@@ -107,6 +109,115 @@ window.MathJax = {
   }
   .small { font-size: 15px; color: var(--muted); }
   hr { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+
+  /* front-page entry points */
+  .front-door {
+    margin: 0 0 28px;
+    padding: 24px;
+    border: 1px solid #bfd2e3;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #f4f9fd 0%, #ffffff 100%);
+    box-shadow: 0 10px 30px rgba(43,93,138,0.08);
+  }
+  .front-door h2 {
+    margin: 0 0 8px;
+    padding: 0;
+    border: 0;
+    color: var(--ink);
+    font-size: 25px;
+  }
+  .front-door p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 16.5px;
+  }
+  .front-label {
+    display: block;
+    margin: 0 0 8px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .front-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+  }
+  .front-cta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .front-cta a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    border: 1px solid var(--accent);
+    border-radius: 7px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+  }
+  .front-cta a + a {
+    background: #fff;
+    color: var(--accent);
+  }
+  .front-cta a:hover { background: #234d72; }
+  .front-cta a + a:hover { background: #e6eef5; }
+  .front-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px;
+  }
+  .front-card h3 {
+    margin: 0 0 6px;
+    font-size: 19px;
+  }
+  .front-card p {
+    min-height: 52px;
+    font-size: 15.5px;
+  }
+  .front-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .front-links a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #f6f8fa;
+    color: var(--accent);
+    font-size: 14.5px;
+    font-weight: 650;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+  }
+  .front-links a:hover {
+    background: #e6eef5;
+    border-color: #b9ccdc;
+  }
+  .front-links a.featured {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .front-links a.featured:hover { background: #234d72; }
 
   /* hero figure */
   .hero {
@@ -167,6 +278,13 @@ window.MathJax = {
   .links a:hover { background: #e6eef5; }
   .links a.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   .links a.primary:hover { background: #234d72; }
+  .links a.spotlight {
+    background: var(--accent-soft);
+    border-color: #b9ccdc;
+    color: var(--accent);
+    font-weight: 650;
+  }
+  .links a.spotlight:hover { background: #dceaf4; }
   .links a.muted { color: var(--muted); }
   .links .none {
     font-size: 13.5px;
@@ -196,6 +314,17 @@ window.MathJax = {
     color: var(--muted);
   }
   footer a { color: var(--accent); }
+  @media (max-width: 720px) {
+    .wrap { padding: 36px 18px 72px; }
+    .front-door { padding: 18px; }
+    .front-grid { grid-template-columns: 1fr; }
+    .front-card p { min-height: 0; }
+  }
+  @media (max-width: 460px) {
+    .front-cta { grid-template-columns: 1fr; }
+    .front-links { grid-template-columns: 1fr; }
+    .links a { width: 100%; justify-content: center; }
+  }
 </style>
 </head>
 <body>
@@ -208,6 +337,40 @@ window.MathJax = {
   <a href="https://github.com/galatheus-labs/learned-syndrome-recovery">source repository</a> &middot;
   preprint PDFs, interactive tutorials, and reproduction commands below
 </p>
+
+<section class="front-door" aria-labelledby="start-here">
+  <span class="front-label">Start here</span>
+  <h2 id="start-here">Tutorials and animations are the front door</h2>
+  <p>Use the guided tutorials for the argument, then open the browser animations to poke directly at the lattices, decoders, capacity knees, and gauge constraints.</p>
+  <div class="front-cta">
+    <a href="papers/tutorials/fracton.html">Start the fracton tutorial</a>
+    <a href="papers/examples/fracton_examples.html">Run the fracton animation</a>
+  </div>
+
+  <div class="front-grid">
+    <div class="front-card">
+      <h3>Guided tutorials</h3>
+      <p>Self-contained explanations for each paper, written to make the assumptions, claims, and numerical evidence checkable before reading the PDFs.</p>
+      <div class="front-links">
+        <a class="featured" href="papers/tutorials/fracton.html">Fracton</a>
+        <a href="papers/tutorials/qec.html">Surface-code QEC</a>
+        <a href="papers/tutorials/gauge.html">Gauge theorem</a>
+        <a href="papers/tutorials/compression.html">Voxel codec</a>
+      </div>
+    </div>
+
+    <div class="front-card">
+      <h3>Interactive animations</h3>
+      <p>Library-free canvas widgets for the core mechanisms: fracton quadruples, matching paths, parity gates, rate-distortion curves, and decoder scoreboards.</p>
+      <div class="front-links">
+        <a class="featured" href="papers/examples/fracton_examples.html">Fracton</a>
+        <a href="papers/examples/qec_examples.html">Surface-code QEC</a>
+        <a href="papers/examples/gauge_examples.html">Gauge theorem</a>
+        <a href="papers/examples/compression_examples.html">Voxel codec</a>
+      </div>
+    </div>
+  </div>
+</section>
 
 <div class="aside">
   <span class="label">The one idea to hold onto</span>
@@ -223,7 +386,7 @@ window.MathJax = {
 <p>
   Each paper studies how algebraic constraints and learned neural proposals interact on 3D lattices.
   For the shortest path to the main result, start with the X-cube fracton paper and read the other three as
-  foundations and controls. Every paper ships a PDF and an interactive, library-free tutorial you can run in the browser.
+  foundations and controls. Every paper ships a PDF, a guided tutorial, and interactive animations you can run in the browser.
 </p>
 
 <div class="cards">
@@ -233,9 +396,9 @@ window.MathJax = {
     <h3>1. Structure-Aware Neural Decoding for the X-Cube Fracton Code</h3>
     <p>The X-cube code has subdimensional lineon structure. An <code>AxisLineonHead</code> aggregates evidence along the logical line geometry instead of flattening the problem into a generic 3D classifier &mdash; and scales favorably with code size where matching baselines struggle.</p>
     <div class="links">
-      <a class="primary" href="papers/fracton.pdf"><span class="ico">📄</span> Paper (PDF)</a>
-      <a href="papers/tutorials/fracton.html"><span class="ico">📘</span> Tutorial</a>
-      <a href="papers/examples/fracton_examples.html"><span class="ico">🧪</span> Interactive examples</a>
+      <a href="papers/fracton.pdf"><span class="ico">📄</span> Paper (PDF)</a>
+      <a class="primary" href="papers/tutorials/fracton.html"><span class="ico">📘</span> Tutorial</a>
+      <a class="spotlight" href="papers/examples/fracton_examples.html"><span class="ico">&#9654;</span> Animations</a>
       <a class="muted" href="https://github.com/galatheus-labs/learned-syndrome-recovery/tree/main/fracton_xcube"><span class="ico">📦</span> Code</a>
     </div>
   </div>
@@ -245,9 +408,9 @@ window.MathJax = {
     <h3>2. Sizing and Capacity Boundaries for Surface-Code QEC</h3>
     <p>Pure spatial 3D convolutional decoders have measurable capacity knees. Multi-seed results compare classic and LC0-style residual blocks against paired MWPM across distances and physical error rates &mdash; mapping where learned decoders win, and where the capacity boundary becomes visible.</p>
     <div class="links">
-      <a class="primary" href="papers/qec.pdf"><span class="ico">📄</span> Paper (PDF)</a>
-      <a href="papers/tutorials/qec.html"><span class="ico">📘</span> Tutorial</a>
-      <a href="papers/examples/qec_examples.html"><span class="ico">🧪</span> Interactive examples</a>
+      <a href="papers/qec.pdf"><span class="ico">📄</span> Paper (PDF)</a>
+      <a class="primary" href="papers/tutorials/qec.html"><span class="ico">📘</span> Tutorial</a>
+      <a class="spotlight" href="papers/examples/qec_examples.html"><span class="ico">&#9654;</span> Animations</a>
       <a class="muted" href="https://github.com/galatheus-labs/learned-syndrome-recovery/tree/main/surface_code_qec"><span class="ico">📦</span> Code</a>
     </div>
   </div>
@@ -257,9 +420,9 @@ window.MathJax = {
     <h3>3. Gauge Structure and Architectural Inductive Bias</h3>
     <p>The corrected axial-parity voxel codec has codespace \(\mathrm{image}(d_x d_y d_z)\) &mdash; a discrete \(\mathbb{Z}_2\) fracton gauge structure. But hard-coding that exact algebra into the architecture underperforms a more flexible multi-scale bottleneck prior.</p>
     <div class="links">
-      <a class="primary" href="papers/gauge.pdf"><span class="ico">📄</span> Paper (PDF)</a>
-      <a href="papers/tutorials/gauge.html"><span class="ico">📘</span> Tutorial</a>
-      <a href="papers/examples/gauge_examples.html"><span class="ico">🧪</span> Interactive examples</a>
+      <a href="papers/gauge.pdf"><span class="ico">📄</span> Paper (PDF)</a>
+      <a class="primary" href="papers/tutorials/gauge.html"><span class="ico">📘</span> Tutorial</a>
+      <a class="spotlight" href="papers/examples/gauge_examples.html"><span class="ico">&#9654;</span> Animations</a>
       <a class="muted" href="https://github.com/galatheus-labs/learned-syndrome-recovery/tree/main/fracton_xcube/src/gauge_paper"><span class="ico">📦</span> Code</a>
     </div>
   </div>
@@ -269,9 +432,9 @@ window.MathJax = {
     <h3>4. Constraint Locality in Learned Syndrome Decoding</h3>
     <p>In 3D voxel compression, the useful constraints are local, overlapping, and content-aware. Targeted belief propagation and local surface checks refine a strong learned proposal, while hard high-weight global parity projections can erase the spatial information the model relies on.</p>
     <div class="links">
-      <a class="primary" href="papers/compression.pdf"><span class="ico">📄</span> Paper (PDF)</a>
-      <a href="papers/tutorials/compression.html"><span class="ico">📘</span> Tutorial</a>
-      <a href="papers/examples/compression_examples.html"><span class="ico">🧪</span> Interactive examples</a>
+      <a href="papers/compression.pdf"><span class="ico">📄</span> Paper (PDF)</a>
+      <a class="primary" href="papers/tutorials/compression.html"><span class="ico">📘</span> Tutorial</a>
+      <a class="spotlight" href="papers/examples/compression_examples.html"><span class="ico">&#9654;</span> Animations</a>
       <a class="muted" href="https://github.com/galatheus-labs/learned-syndrome-recovery/tree/main/voxel_compression"><span class="ico">📦</span> Code</a>
     </div>
   </div>

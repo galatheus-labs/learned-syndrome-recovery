@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Examples: Constraint Locality in Learned Syndrome Decoding for 3D Occupancy Grids</title>
+<link rel="icon" href="data:,">
 <script>
 window.MathJax = {
   tex: {
@@ -186,7 +187,7 @@ window.MathJax = {
 <h1>Hands-On Examples for Constraint Locality in Learned Syndrome Decoding</h1>
 <p class="subtitle">Four interactive demos &mdash; the rate&ndash;distortion frontier, why global projection breaks a good guess, the post-processing scoreboard, and temporal fusion</p>
 <p class="byline">
-  Companion to <a href="tutorial.html">tutorial.html</a> and to the paper <em>&ldquo;Constraint Locality in Learned Syndrome Decoding for 3D Occupancy Grids&rdquo;</em> (B.&nbsp;Guarraci, Galatheus, May&nbsp;2026).
+  Companion to <a href="../tutorials/compression.html">the tutorial</a> and to the paper <em>&ldquo;Constraint Locality in Learned Syndrome Decoding for 3D Occupancy Grids&rdquo;</em> (B.&nbsp;Guarraci, Galatheus, May&nbsp;2026).
   The tutorial explains <em>why</em> constraint geometry matters and what the paper claims; this page lets you <em>see</em> it. Every widget below runs entirely offline with hand-written canvas + JavaScript &mdash; no libraries, MathJax aside. The voxel slice in Widget&nbsp;2 is a schematic of the local-vs-global story; every <em>number</em> on this page (Widgets&nbsp;1&ndash;4) is taken verbatim from the paper's tables and the reproducer artifacts in <code>data/clean-v2-may02-rsfix/aggregate_summary.json</code> and <code>data/clean-v2-may02-strata/strata_summary.json</code> (seeds 42/43/44, 200 ShapeNet validation samples). Nothing is invented.
 </p>
 
@@ -337,7 +338,7 @@ window.MathJax = {
 
 <hr>
 <p class="small">
-  Companion to <a href="tutorial.html">tutorial.html</a> and <code>main.tex</code> (&ldquo;Constraint Locality in Learned Syndrome Decoding for 3D Occupancy Grids&rdquo;, B.&nbsp;Guarraci, Galatheus). Widget&nbsp;1 numbers are the rate&ndash;distortion table from <code>data/clean-v2-may02-rsfix/aggregate_summary.json</code> &rarr; <code>levels</code>. Widget&nbsp;2&ndash;3 diagnosis and \(\Delta\)IoU figures come from <code>main.tex</code> Tables 1&ndash;2 (reproducer Sections&nbsp;5&ndash;6, <code>aggregate_summary.json</code> &rarr; <code>projection</code>); the per-quartile breakdown is from <code>data/clean-v2-may02-strata/strata_summary.json</code>. Widget&nbsp;4 is the appendix temporal table (\(0.847\!\to\!0.958\!\to\!0.975\)). The voxel slice in Widget&nbsp;2 is an illustrative schematic; all reported values are verbatim from the artifacts. No results were invented.
+  Companion to <a href="../tutorials/compression.html">the tutorial</a> and <code>main.tex</code> (&ldquo;Constraint Locality in Learned Syndrome Decoding for 3D Occupancy Grids&rdquo;, B.&nbsp;Guarraci, Galatheus). Widget&nbsp;1 numbers are the rate&ndash;distortion table from <code>data/clean-v2-may02-rsfix/aggregate_summary.json</code> &rarr; <code>levels</code>. Widget&nbsp;2&ndash;3 diagnosis and \(\Delta\)IoU figures come from <code>main.tex</code> Tables 1&ndash;2 (reproducer Sections&nbsp;5&ndash;6, <code>aggregate_summary.json</code> &rarr; <code>projection</code>); the per-quartile breakdown is from <code>data/clean-v2-may02-strata/strata_summary.json</code>. Widget&nbsp;4 is the appendix temporal table (\(0.847\!\to\!0.958\!\to\!0.975\)). The voxel slice in Widget&nbsp;2 is an illustrative schematic; all reported values are verbatim from the artifacts. No results were invented.
 </p>
 
 </div>
