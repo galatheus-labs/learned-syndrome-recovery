@@ -2,6 +2,7 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage{amsmath,amssymb,amsfonts,amsthm,bm}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -9,6 +10,7 @@
 \usepackage{url}
 \usepackage[margin=1in]{geometry}
 \usepackage{enumitem}
+\setlength{\emergencystretch}{2em}
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{corollary}[theorem]{Corollary}
@@ -20,7 +22,7 @@
   Galatheus\\
   \texttt{brian@galatheus.com}}
 
-\date{May 2026}
+\date{October 2026 revision}
 
 \begin{document}
 \maketitle
@@ -30,26 +32,27 @@ We study the design of learned decoders for sparse-binary voxel
 compression with an axial parity code. We prove that the codespace of
 axial-line, plane, and global parity on the 3-torus is exactly the
 image of the discrete third partial derivative $\partial_x \partial_y
-\partial_z$ over $\mathbb{F}_2$, with closed-form rank $3n^2 - 3n + 1$,
-identifying the parity codec as a discrete-$\mathbb{Z}_2$ instance of a
-scalar-charge fracton gauge theory and placing it in the same algebraic
-family as surface-code quantum error correction. The proof is elementary
+\partial_z$ over $\mathbb{F}_2$, with parity-check rank $3n^2 - 3n + 1$. The potential parameterization
+has an exact redundancy given by the kernel of this derivative operator.
+This is an algebraic description of the classical codespace; an equivalence
+to a particular physical fracton gauge theory is not established. The proof is elementary
 once the lattice is read through its tensor-product structure, and the
 theorem caught a real indexing bug in our previously deployed parity
 matrix (reported rank $2016$ instead of the correct $2977$ at $n=32$).
 
 The natural architectural reading of this theorem --- parameterise the
-network's output as $x = \partial_x \partial_y \partial_z \phi$ and
+network's residual as $r = \partial_x \partial_y \partial_z \phi$ and
 predict the gauge potential $\phi$ --- fails decisively. Across $14$
 configurations spanning capacity, training time, and several
 optimisation tricks, this \emph{phi-prior} decoder plateaus at
 validation IoU $\approx 0.29$ versus $\approx 0.48$ for an unconstrained
-baseline at matched configuration; the gap is far larger than seed or
-checkpoint-selection noise. A soft U($1$) latent-gauge variant does
-better ($\approx 0.51$), but a controlled ablation shows its gauge
-machinery is not load-bearing, and a generic multi-scale autoencoder
-with no gauge structure of any kind wins outright ($0.572 \pm 0.004$
-over three seeds). The principal lesson is methodological: a known
+baseline at matched configuration; the gap persists across the explored configurations, although matched
+multi-seed tests of all architectures remain to be performed. A soft U($1$) latent-gauge variant does
+better ($\approx 0.51$), but removing its auxiliary gauge losses does not reduce validation
+performance in the reported single-seed ablation. A generic multi-scale
+autoencoder obtains the highest reported validation score ($0.572 \pm 0.004$
+over three seeds). The empirical conclusion is specific to these implementations and budgets.
+The principal lesson is methodological: a known
 mathematical structure characterises \emph{what is reachable}, not the
 right inductive bias for a learned decoder, and enforcing exact
 algebraic structure architecturally can actively harm optimisation ---
@@ -63,7 +66,11 @@ work.
 \section{Introduction}
 \label{sec:intro}
 
-The parity codec for sparse-binary voxel compression encodes a $32^3$
+The motivating communication problem is to transmit a syndrome that
+restricts a receiver's learned source prior to a compatible set of
+reconstructions. A prior ranks alternatives; it does not make every
+underdetermined syndrome uniquely invertible. In the experiments here,
+the parity codec for sparse-binary voxel compression encodes a $32^3$
 binary occupancy field by transmitting (a) a syndrome consisting of
 parity sums along axis-aligned lines, planes, and the volume total,
 and (b) optional spectral side-information (low-frequency DCT
@@ -90,16 +97,14 @@ We pursue three connected goals:
 structure of the set of voxel fields satisfying every parity check?
 We give a theorem (\S\ref{sec:theorem}) stating that the codespace is
 exactly the image of the discrete third partial derivative over
-$\mathbb{F}_2$. This identifies the parity codec as a
-discrete-$\mathbb{Z}_2$ instance of Pretko's scalar-charge fracton
-gauge theory~\cite{pretko2017} and provides a constructive
-parameterisation: every codeword is the discrete-XOR of eight corner
+$\mathbb{F}_2$. This provides a constructive
+parameterisation with a gauge-like redundancy: every codeword is the discrete-XOR of eight corner
 values of an underlying scalar potential $\phi$.
 
 \item \textbf{Test whether the theorem prescribes a useful
 architecture.} The most direct interpretation is to predict $\phi$
-with a neural network and emit $x = \partial_x \partial_y \partial_z
-\phi$ as a fixed output operator. We call this the \emph{phi-prior}
+with a neural network and emit $r = \partial_x \partial_y \partial_z
+\phi$ before reconstructing $x_{\mathrm{base}}\oplus r$. We call this the \emph{phi-prior}
 decoder. We find it fails decisively (\S\ref{sec:phi-prior}) ---
 across capacity, training time, and several optimisation tricks, it
 plateaus at $\approx 0.29$ IoU versus an unconstrained baseline's
@@ -108,18 +113,18 @@ $\approx 0.48$ at matched compute.
 \item \textbf{Find what does work.} A multi-scale latent autoencoder
 (\S\ref{sec:autoencoder}) --- encoder $\to 8^3$ latent $\to$ SharpNet
 upsample, with no gauge structure of any kind --- beats both the
-phi-prior and the unconstrained baseline. A controlled ablation
-isolates the cause: the gauge machinery (both the hard $\mathbb{F}_2$
-operator and the soft U($1$) regularisers) is not the active
-ingredient; multi-scale processing is.
+phi-prior and the unconstrained baseline. The comparisons suggest that multi-scale processing is useful and
+that the tested gauge restrictions are unnecessary for these validation
+scores. Differences in parameter count and limited seed coverage prevent
+an exhaustive causal attribution.
 \end{enumerate}
 
 The intended contribution is therefore a theorem, a negative result,
 and a controlled ablation, organised around the question of when a
 known mathematical structure should and should not be enforced
 architecturally in a learned decoder. A natural follow-up --- whether
-the same architectural lesson transfers across the algebraic family the
-theorem unifies (in particular to surface-code QEC) --- is discussed as
+the same architectural lesson transfers to other syndrome-inference tasks
+(in particular surface-code QEC) --- is discussed as
 a deferred, multi-seed cross-domain study in \S\ref{sec:qec}.
 
 \section{Background}
@@ -150,14 +155,14 @@ predict $r$ from $x_{\text{base}}$, the syndrome, and (optionally) the
 DCT side-info.
 
 \subsection{Surface-code QEC}
-The surface code is a $\mathbb{Z}_2$ stabiliser code on a $2$D toric
-lattice~\cite{kitaev2003}; its decoder must infer the logical-error
-class given the syndrome of stabiliser measurements (a $3$D detector
-grid when stacked across rounds). It is a $\mathbb{Z}_2$ $1$-form
-gauge theory in the Wegner--Kitaev sense~\cite{wegner1971,kitaev2003},
-one rung below the fracton gauge theory the parity codec instantiates.
-Our deployed surface-code decoder is a flat-resolution $3$D
-ResNet~\cite{he2016}.
+Surface and toric codes are $\mathbb{Z}_2$ stabilizer codes with a
+connection to lattice gauge theory~\cite{wegner1971,kitaev2003}. Their
+decoders infer logical effects from a syndrome under a noise prior.
+The companion experiment uses a rotated planar surface code with repeated
+measurements represented on a spatiotemporal detector grid. This is
+statistically related to prior-conditioned reconstruction, but its target
+is a logical class rather than a voxel field. No physical equivalence
+between the axial codec and these quantum codes is assumed.
 
 \subsection{Notation}
 $(\partial_a \phi)_v := \phi_v + \phi_{v + \hat e_a} \pmod 2$ is the
@@ -260,20 +265,22 @@ lower-rank} code (a duplicate-axis indexing error, not a
 re-presentation of the same checks). The closed-form rank is thus also
 a practical correctness check for the codec's bit-budget accounting.
 
-\paragraph{Interpretation.}
-The codespace is the discrete-$\mathbb{F}_2$ analogue of Pretko's
-continuum scalar-charge fracton gauge theory~\cite{pretko2017}: the
-codeword $x$ is the third-derivative ``field strength'' of an underlying
-potential $\phi$. The conserved charges of the fracton matter sector ---
-total charge ($G$), planar charges ($P^a_\alpha$), and line charges
-($L^a_{\alpha\beta}$) --- are exactly the parity checks of the codec.
-Surface-code QEC corresponds to one rung up the fracton hierarchy: a
-$\mathbb{Z}_2$ $1$-form gauge theory whose Gauss law is the standard
-four-weight stabiliser. The fracton$\leftrightarrow$code dictionary is
-itself established~\cite{pretko2017,vijay2016,haah2011}; our contribution
-is the specific identification of the axial-parity codec as the
-$\partial_x\partial_y\partial_z$ field-strength theory and the
-closed-form rank that follows.
+\paragraph{Interpretation and the scope of the gauge language.}
+Writing $x=T\phi$ gives the exact redundancy
+$\phi\mapsto\phi+\kappa$ for $\kappa\in\ker T=K_x+K_y+K_z$.
+Here ``gauge'' refers to this non-unique potential representation.
+The line checks span all the constraints; plane and global checks are
+dependent combinations. The theorem is about a binary linear subspace,
+and does not supply a quantum Hamiltonian or a phase classification.
+
+Subsystem conservation laws and redundant potentials motivate a connection
+to fracton models~\cite{pretko2017,vijay2016,haah2011}, but the cited
+rank-2 scalar-charge theory has tensor fields with Gauss law
+$\partial_i\partial_j E^{ij}=\rho$. Identifying the present scalar
+triple-difference construction with that theory requires an additional
+mapping of fields, local operators, and constraints. We do not provide
+that mapping or claim equivalence to the X-cube phase. The constructive
+codespace theorem and the decoder experiments stand independently of it.
 
 \section{Experimental setup}
 \label{sec:setup}
@@ -345,15 +352,15 @@ The plateau is robust to capacity ($5$M $=$ $12$M), training duration
 and data scale ($2$K $=$ $8$K). The phi-prior occasionally exhibits a
 phase-transition jump from $\sim 0.13$ to $\sim 0.21$ around epoch $12$
 under the right hyperparameters but always saturates at $\sim 0.29$
-soon after. \textbf{Architectural enforcement of the codespace is
-therefore not a viable inductive bias on this task.}
+soon after. \textbf{The tested potential-output parameterization performs
+poorly under these training configurations.}
 
-The reason is mechanical: the bilinear soft-XOR over $8$ corners has
-gradient bounded by $1$ but multiplicatively attenuated through the
-chain, and the network must simultaneously modulate $8$ voxel-position
-$\phi$ values to flip a single residual bit --- a non-local
-credit-assignment problem that the BCE loss cannot drive efficiently
-when the target distribution is sparse (most residuals are $0$).
+One possible optimization explanation concerns the soft-XOR output.
+Its partial derivatives are products of factors with magnitude at most one,
+which can attenuate gradients. Each potential variable also affects eight
+neighboring residual positions, coupling their corrections. These features
+motivate a credit-assignment hypothesis; the reported experiments do not
+isolate them from other optimization effects.
 
 \section{What works instead: a generic multi-scale prior}
 \label{sec:autoencoder}
@@ -363,7 +370,7 @@ right one? A generic multi-scale latent autoencoder --- encoder
 downsampling $32^3 \to 8^3$ with $C_{\mathrm{latent}}$ channels, then a
 SharpNet decoder upsampling $8^3 \to 32^3$ with residual blocks at each
 scale, and \emph{no gauge structure of any kind} --- beats both the
-phi-prior and the unconstrained x-prior at matched compute
+phi-prior and the unconstrained x-prior under the reported training budgets
 (Table~\ref{tab:compare}).
 
 \begin{table}[h]
@@ -384,23 +391,26 @@ soft U($1$) transporter                      & soft, coarse latent   & 4.4M  & 0
 held-back ShapeNet samples). The autoencoder row is the mean $\pm$
 stdev over seeds $\{42,43,44\}$; the other rows are single-seed (the
 phi-prior plateau is corroborated by the $14$-run sweep in
-Table~\ref{tab:phi-prior}). Hard gauge enforcement is worst; soft gauge
-structure helps modestly but its machinery is not load-bearing; the
-gauge-free multi-scale autoencoder wins.}
+Table~\ref{tab:phi-prior}). The multi-scale autoencoder has the highest
+reported score, but parameter counts and seed coverage differ across rows.}
 \label{tab:compare}
 \end{table}
 
-Two controlled observations isolate the cause. First, the soft U($1$)
+Two exploratory comparisons inform the architectural interpretation. First, the soft U($1$)
 transporter with all auxiliary curvature/transport/latent-reconstruction
 losses \emph{removed} (val\_iou $0.518$) slightly outperforms the full
-version ($0.509$): the gauge regularisers are not load-bearing. Second,
+version ($0.509$): this single-seed comparison shows no benefit from the
+auxiliary regularisers. Second,
 dropping the parallel-transport operator entirely --- leaving a plain
 multi-scale autoencoder --- improves things further ($4.1$M: $0.554$;
-$16$M: $0.572$). The win is multi-scale processing, not gauge structure.
+$16$M: $0.572$). These results favor the tested multi-scale architectures, but a
+fully matched multi-seed ablation is needed to isolate the responsible
+components.
 
 A single-seed bottleneck-size sweep indicates an $8^3$ latent is
-near-optimal: a tighter $4^3$ bottleneck loses information ($0.562$ at
-$32$M) and a looser $16^3$ underconstrains ($0.542$ at $3$M). This is
+the best of the tested configurations: $4^3$ gives $0.562$ at
+$32$M parameters and $16^3$ gives $0.542$ at $3$M. Since capacities also
+differ, these measurements do not isolate bottleneck size. This is
 consistent with the interpretation that the bottleneck implements an
 implicit low-frequency/smoothness prior, matched to the sparse,
 surface-concentrated structure of the occupancy field --- precisely the
@@ -410,27 +420,19 @@ multi-seed claims.
 
 \section{A deferred cross-domain question}
 \label{sec:qec}
+Classical voxel reconstruction and quantum logical decoding both combine
+syndrome evidence with a prior, but their targets and input statistics
+differ. The classical target is a sparse occupancy field; the quantum
+input is a detector field whose event density depends on the noise model.
+Representing it as a full 3D array does not make its events dense.
 
-The gauge theorem places axial-parity compression, surface-code QEC, and
-X-cube fracton QEC in a common constraint-system family: the surface code is a
-$\mathbb{Z}_2$ $1$-form gauge theory, while the parity codec is a
-discrete-$\mathbb{Z}_2$ scalar-charge fracton gauge theory. It is natural to ask
-whether the multi-scale prior that wins here also helps for QEC syndrome
-decoding, where the syndrome is a dense $3$D detector volume rather than a
-sparse occupancy field.
-
-Preliminary single-seed experiments suggest the opposite: aggressive
-spatial bottlenecks appear to destroy the per-detector-cell information
-that dense surface-code syndromes carry, where a deployed
-flat-resolution convolution preserves it. We deliberately do \emph{not}
-report these as a result. A defensible cross-domain claim requires a
-disjoint test split, multiple seeds, and matched baselines decoded on
-the same shots --- the standard we apply to the compression numbers
-above is not yet met on the QEC side. We state only the hypothesis the
-preliminary runs suggest: that the multi-scale prior's advantage is
-specific to sparse signals with a smoothness structure and does not
-extend to dense per-cell syndromes. Testing it rigorously is future
-work.
+Preliminary architectural observations motivate testing whether aggressive
+spatial bottlenecks discard useful detector-position information.
+They are not retained here as cross-domain results. A defensible
+comparison requires disjoint test sets, multiple seeds, matched resource
+budgets, and paired evaluation where applicable. The present voxel
+architecture comparisons themselves use validation scores and incomplete
+multi-seed coverage; they do not yet meet that standard either.
 
 \section{Discussion}
 
@@ -438,8 +440,8 @@ work.
 The gauge theorem tells us \emph{what is reachable} (the codespace),
 not \emph{how to reach it} (the architecture). Architectural
 enforcement of the theorem's constructive parameterisation hurt; the
-right inductive bias for this task is unrelated to the gauge structure
-and is well-served by a generic multi-scale architecture. The
+reported validation scores favor a generic multi-scale architecture.
+This does not rule out other ways of exploiting the exact structure. The
 compression codec's existing DCT side-information implements a related
 smoothness prior explicitly, and the multi-scale autoencoder appears to
 learn one implicitly via its $8^3$ bottleneck.
@@ -466,7 +468,7 @@ enforcement) without the optimisation cost we observed?
 axial parity on the $d$-torus is the image of $\partial_1 \cdots
 \partial_d$, with rank obtainable by the same tensor argument); does the
 architectural lesson generalise too? (iii)~Does the
-sparse-with-smoothness vs dense-per-cell distinction sketched in
+source-field vs detector-field distinction sketched in
 \S\ref{sec:qec} hold up under a rigorous multi-seed cross-domain test,
 and where do quantum LDPC codes with sparser stabilisers fall?
 
@@ -478,12 +480,12 @@ IoU on a held-back ShapeNet-$32^3$ split, not a disjoint held-out test
 split; the multi-seed autoencoder result uses seeds $\{42,43,44\}$,
 while the x-prior, phi-prior, and transporter rows and the
 bottleneck-size sweep are single-seed exploratory measurements.
-(2)~The matched-compute comparison in Table~\ref{tab:compare} is
+(2)~The comparison in Table~\ref{tab:compare} is
 matched in training budget but not exactly in parameter count across all
-rows; the headline conclusion (hard enforcement worst, gauge machinery
-not load-bearing, multi-scale wins) rests on gaps far larger than seed
-noise and on the directionality of the two ablations rather than on a
-single point estimate. (3)~Results are at $32^3$ resolution on a single
+rows; parameter counts vary substantially, and the single-seed baselines
+do not establish their training variability. Equal epochs or samples
+also do not imply equal FLOPs. The results motivate, but do not replace,
+matched-capacity, matched-compute, multi-seed controls. (3)~Results are at $32^3$ resolution on a single
 object dataset. (4)~The cross-domain QEC discussion
 (\S\ref{sec:qec}) is a hypothesis, not a measured result.
 
@@ -492,22 +494,23 @@ object dataset. (4)~The cross-domain QEC discussion
 We proved a clean algebraic characterisation of the parity codec's
 codespace --- it is exactly the image of the discrete third derivative
 $\partial_x \partial_y \partial_z$ over $\mathbb{F}_2$, with closed-form
-rank $3n^2 - 3n + 1$ --- connecting it to fracton gauge theory and to
-surface-code QEC, and we used it to catch a real indexing bug in a
+rank $3n^2 - 3n + 1$ --- and we used it to catch an indexing bug in a
 deployed parity matrix. We then tested the natural architectural
 translation of the theorem (predicting the gauge potential and applying
 the third derivative as a fixed output operator) and found it
 catastrophically worse than an unconstrained baseline. The actual win on
 the compression task comes from a generic multi-scale autoencoder with
-no gauge structure, and a controlled ablation shows the gauge machinery
-is not the active ingredient.
+no gauge structure, and the exploratory ablations do not show a benefit from the tested
+auxiliary gauge losses. They do not establish a general failure of
+algebraically structured neural decoders.
 
+The empirical conclusion is specific to these implementations and budgets.
 The principal lesson is methodological: a known mathematical structure
 characterises feasibility but does not prescribe the right inductive
 bias; architectural choice should be governed by the optimisation
 landscape and signal structure of the specific task. We provide a
 verified theorem, a clean negative example of constraint enforcement,
-and the ablation that localises why it fails.
+and initial ablations that motivate further mechanism tests.
 
 \paragraph{Reproducibility.}
 All experiments are reproducible from the released code. In the family
@@ -559,3 +562,4 @@ $n \in \{4,6,8\}$ in $\sim 20$~s on CPU. See the companion
 \end{thebibliography}
 
 \end{document}
+

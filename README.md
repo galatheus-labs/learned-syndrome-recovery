@@ -2,15 +2,22 @@
 
 This repository contains a four-paper research program on learned recovery from
 syndrome constraints. The work connects classical binary syndrome source coding,
-3D voxel compression, fracton gauge structure, and topological quantum error
+3D voxel reconstruction, axial-parity codespaces, and topological quantum error
 correction (QEC).
 
-The common problem is recovery from constraints. A syndrome rarely specifies a
-single answer; it defines a large equivalence class or coset. The practical
-question is how to choose the right representative. Across these papers, the
-answer is that geometry matters: neural proposals help when their inductive bias
-matches the constraint geometry, while hard global algebra can be actively
-harmful when it destroys local spatial information.
+The work began with a communication question: how little instance-specific
+information must a sender transmit when the receiver already has a useful
+model of the source? A syndrome acts as an index into a set of compatible
+signals, and the shared prior ranks or samples reconstructions within that set.
+It does not uniquely identify every possible source. Exact recovery, low
+distortion, and a plausible conditional sample are different objectives.
+
+The classical experiments study voxel reconstruction with spectral and coarse
+side information as well as syndrome bits; syndrome-only reconstruction remains
+the motivating goal. The quantum experiments instead infer logical error
+classes under a noise prior. A plausible replacement for an unknown quantum
+state is not successful quantum recovery. The common research question is how
+constraint geometry, learned priors, and computational budgets affect inference.
 
 ![X-cube scaling plot: learned AxisLineonHead decoder per-sector LER improves with code size at p = 0.03](papers/figures/fracton/fig_scaling.png)
 
@@ -22,30 +29,32 @@ neural proposals interact on 3D lattices.
 **Headline result.** We introduce a structure-aware neural decoder for the
 X-cube fracton code using an `AxisLineonHead` line-aggregation layer. In the
 retained scaling experiment, learned per-sector logical error rate improves from
-`L=3` through `L=10` at `p=0.03`, while standard baselines do not show the same
-scaling trend.
+`L=3` through `L=10` at `p=0.03`, while the implemented baselines do not show
+the same trend. Whole-block failure improves from `L=4` onward at `p=0.03`,
+but worsens with size at `p=0.05`. Models are trained separately at each `(L,p)`;
+these are finite-size measurements, not a threshold or cross-size-transfer result.
 
-**Foundations and controls.** The other three papers explain why this result is
-not an isolated trick:
+**Related questions.** The other three papers examine different parts of
+prior-conditioned recovery; they are not proofs of a common physical theory:
 
 1. **Constraint locality.** In 3D voxel compression, high-weight global parity
    projections can degrade strong learned spatial proposals. Local overlapping
-   surface checks and targeted belief propagation provide the useful
-   refinements.
-2. **Gauge bridge.** We prove that the corrected axial-parity voxel codec has
-   codespace `image(d_x d_y d_z)`, a discrete `Z_2` fracton gauge structure.
-   This explains why the compression and fracton-QEC settings share more than a
-   superficial syndrome-decoding form.
+   surface checks and targeted belief propagation improve the tested proposals,
+   with additional syndrome bits. Matched-rate and matched-solver comparisons
+   are needed to isolate locality.
+2. **Codespace structure.** We prove that the corrected axial-parity voxel codec
+   has codespace `image(d_x d_y d_z)`, with an exact redundancy in its potential
+   representation. This algebraic identity does not by itself establish
+   equivalence to a physical fracton gauge theory or the X-cube phase.
 3. **Surface-code capacity boundaries.** We map where pure spatial 3D
    convolutional decoders beat paired MWPM in the studied surface-code setting,
    and where the same architectural family runs into data/capacity boundaries.
 
-The shared thesis is deliberately narrow:
+The shared question is:
 
-> Exact algebraic constraints define the feasible set, but they do not by
-> themselves define the right decoder. Successful learned recovery requires an
-> architecture whose inductive bias matches the geometry of the residual
-> uncertainty.
+> A syndrome defines compatible possibilities, and a prior supplies a preference
+> among them. How do the constraint geometry and the decoder's architecture
+> affect the accuracy and cost of that inference?
 
 ## How to Read the Series
 
@@ -58,18 +67,19 @@ read the supporting papers as foundations:
 |---|---|---|---|
 | Headline result | [`fracton.pdf`](papers/fracton.pdf) | X-cube fracton QEC | A line-aware neural readout can scale favorably with code size where generic baselines struggle. |
 | Classical diagnostic | [`compression.pdf`](papers/compression.pdf) | 3D voxel occupancy grids | Local constraint structure improves learned proposals; global projections can erase useful geometry. |
-| Algebraic foundation | [`gauge.pdf`](papers/gauge.pdf) | Axial parity codes | The codespace is exactly a fracton-like `Z_2` gauge structure, but exact gauge enforcement is not automatically a good architecture. |
+| Algebraic foundation | [`gauge.pdf`](papers/gauge.pdf) | Axial parity codes | A constructive codespace parameterization does not automatically yield a useful neural architecture. |
 | Positive-control QEC study | [`qec.pdf`](papers/qec.pdf) | Surface-code QEC | Right-sized spatial decoders can beat MWPM in some regimes, but the capacity boundary is visible and measurable. |
 
-For the conceptual sequence, read them as: gauge theorem -> constraint locality
--> surface-code capacity -> X-cube fracton decoding. That order moves from the
-algebraic structure, to the classical learned-recovery design rule, to ordinary
-topological QEC, and finally to the nonlocal/subdimensional fracton case.
+For the original conceptual sequence, start with classical reconstruction
+(compression), then the axial codespace theorem (gauge), surface-code resource
+budgets (QEC), and X-cube logical decoding (fracton). This follows the question
+from a shared source prior and compact transmitted evidence to quantum recovery
+with a different success criterion.
 
-Together, the papers argue for a disciplined version of learned syndrome
-recovery: keep the algebraic constraints visible, but let the model use the
-right geometric representation instead of forcing exact global structure into
-the architecture.
+Together, the papers investigate learned syndrome recovery through distinct
+algebraic and empirical results. They motivate geometry-aware architectures
+while keeping feasibility, statistical preference, and successful recovery
+separate.
 
 ## Claims and Non-Claims
 
@@ -83,7 +93,7 @@ the architecture.
 - In the voxel-compression setting, local overlapping surface constraints help a
   strong learned proposal, while hard high-weight algebraic projection can
   damage it.
-- The axial-parity voxel codec has a closed-form gauge-theoretic codespace:
+- The axial-parity voxel codec has a constructive algebraic codespace:
   `image(d_x d_y d_z)` with rank `3n^2 - 3n + 1` for the corresponding parity
   checks.
 - Pure spatial 3D convolutional surface-code decoders have measurable
@@ -92,6 +102,9 @@ the architecture.
 ### What we do not claim
 
 - We do not demonstrate a passive or self-correcting quantum memory.
+- We do not demonstrate syndrome-only or lossless voxel reconstruction.
+- We do not establish a physical equivalence between the classical axial code
+  and a particular fracton gauge theory.
 - We do not claim a production compression codec or state-of-the-art learned
   voxel/point-cloud compression system.
 - We do not claim state-of-the-art surface-code decoding or dominance over
@@ -149,9 +162,10 @@ python3 reproduce_qec_results.py --results-dir data/qec_clean_knee_multiseed_jso
 - Code: [`fracton_xcube/src/gauge_paper/`](fracton_xcube/src/gauge_paper/)
 - Tutorial: [`papers/tutorials/gauge.html`](papers/tutorials/gauge.html)
 
-Core idea: the corrected axial-parity codec has a clean gauge-theoretic
-description, but hard-coding that exact algebraic structure into a neural
-architecture underperforms a more flexible multi-scale bottleneck prior.
+Core idea: the corrected axial-parity codec has an exact potential
+parameterization, but the tested fixed-output implementation underperforms
+alternative priors on validation data. Broader architectural conclusions need
+matched-capacity, multi-seed tests.
 
 ```bash
 cd fracton_xcube
@@ -211,6 +225,11 @@ voxel_compression/
 
 ## Reproducibility
 
+To rebuild the four manuscript PDFs from the checked-in TeX and figures, install
+a TeX distribution with `latexmk` and Latin Modern fonts, then run
+`bash papers/build.sh` from the repository root. This builds the documents;
+it does not rerun the experiments.
+
 Install Python dependencies with:
 
 ```bash
@@ -248,3 +267,4 @@ technical theme is deliberately narrow and reusable: when recovery is defined by
 algebraic constraints, the winning architecture is often the one that respects
 the geometry of the constraint system without mistaking algebraic exactness for
 a useful learning bias.
+

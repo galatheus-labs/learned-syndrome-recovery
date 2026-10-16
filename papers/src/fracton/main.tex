@@ -2,6 +2,7 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage{amsmath,amssymb,amsfonts,amsthm,bm}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -10,129 +11,90 @@
 \usepackage{url}
 \usepackage[margin=1in]{geometry}
 \usepackage{enumitem}
+\setlength{\emergencystretch}{2em}
 
 \title{Structure-Aware Neural Decoding for the X-Cube Fracton Code\\
-\large A Learned Recovery Layer whose Logical Error Rate Improves with System Size}
+\large Finite-Size Results for Logical-Parity Inference}
 
 \author{Brian Guarraci\\
   Galatheus\\
   \texttt{brian@galatheus.com}}
 
-\date{June 2026}
+\date{October 2026 revision}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-The long-term storage of information in three dimensions can be cast as a
-decoding problem: lay down local, overlapping parity checks, and recover the
-stored state from the pattern of violated checks (the syndrome) with a prior.
-We argue the \emph{right} checks are supplied by \emph{fracton order}, whose
-immobile, sub-dimensional excitations give nonlocal conservation laws and a
-subextensive but growing logical count ($k = 6L-3$ on the 3-torus); whether this
-becomes a passive, self-correcting memory is a Hamiltonian/lifetime question,
-while here we isolate the missing piece on the \emph{decoding} side. The obstacle
-is decoding: surface-code-style MWPM does not directly apply --- excitations are
-created four at a time with no string of defect pairs to match --- and while
-code-specific decoders exist, generic BP+OSD struggles on the dense cube-check
-representation. We supply, to our knowledge, the first \emph{neural} decoder for
-the X-cube fracton code: a weight-shared CNN with a structure-preserving
-line-aggregation head (\textsc{AxisLineonHead}) that reads the cube ($Z$)
-syndrome as an $L^3$ scalar field and predicts the $6L-3$ logical-$Z$ parities.
-Across $L \in \{3,4,6,8,10\}$ and $p \in \{0.03,0.05\}$, over three seeds with
-disjoint test splits, it beats the trivial floor, BP+OSD-0, and our naive-weight
-Brown--Williamson implementation (BW-naive) at every operating point (paired
-McNemar $p < 10^{-12}$ vs.\ trivial and BP+OSD-0; we do not claim to benchmark
-the fully tuned Brown--Williamson decoder). Critically, its per-sector logical
-error rate (basis-relative) \emph{improves} monotonically with code size at
-$p=0.03$ ($0.042\to0.035\to0.018\to0.008\to0.003$ for $L=3,4,6,8,10$), and its
-basis-invariant block-failure rate improves from $L=4$ onward ($0.343\to0.118$,
-the lone $L=3\!\to\!4$ step aside), while all three baselines degrade or saturate
---- the scaling signature a useful decoder must show and a fixed local lookup
-table cannot. An ablation isolates the mechanism: a global-pooling head ties
-trivial exactly while line-aggregation and coordinate-convolution heads win, so
-the advantage comes from the code's non-local line structure; a signal-existence
-oracle shows radius-1 local signal collapses by $L=4$ and is negligible by
-$L=6$, yet the learned decoder wins decisively. These results establish a
-scalable learned recovery primitive --- a candidate active recovery layer for the
-broader self-correcting-memory program --- and show that a geometry-matched
-neural decoder can extract nonlocal fracton syndrome structure increasingly well
-as the code grows.
+We study learned logical recovery for the X-cube fracton code under
+code-capacity $X$ noise with perfect syndrome measurements. A weight-shared
+3D convolutional network reads the cube ($Z$) syndrome and uses a
+line-aggregation head (\textsc{AxisLineonHead}) to predict the $6L-3$
+logical-$Z$ parities in a fixed axis-aligned basis. Models are trained
+separately at each code size and physical error rate. Across
+$L\in\{3,4,6,8,10\}$ and $p\in\{0.03,0.05\}$, three-seed evaluations
+on disjoint test splits give lower block failure and mean per-sector
+logical error than the all-zero baseline, BP+OSD-0, and our simplified
+Brown--Williamson-inspired implementation (BW-naive).
+At $p=0.03$, mean per-sector error decreases monotonically from $0.042$
+to $0.003$ over the tested sizes. Block failure increases from $0.306$
+at $L=3$ to $0.343$ at $L=4$, then decreases to $0.118$ at $L=10$.
+At $p=0.05$, block failure instead increases with size, despite the
+improvement in per-sector error from $L=4$ onward. A single-seed
+$L=3$ ablation finds comparable performance for line-aggregation and
+coordinate-convolution heads; global pooling performs like the all-zero
+baseline. This supports retaining spatial information but does not isolate
+line aggregation as the unique mechanism. The results demonstrate
+finite-size learned recovery in the tested regime. They do not establish
+a threshold, superiority to a validated implementation of the published
+Brown--Williamson decoder, cross-size transfer, or a passive quantum memory.
+
 \end{abstract}
 
 \section{Introduction}
 \label{sec:intro}
-This paper is the quantum-fracton member of a four-paper program on learned
-recovery over constraint systems. The shared claim is not that one operational
-decoder applies unchanged across classical compression, surface-code QEC, and
-fracton QEC. It is narrower and more testable: useful learned decoders match
-their inductive bias to the geometry of the constraints they are asked to
-invert. The companion compression paper isolates when parity checks help a
-learned proposal; the gauge-structure paper proves the algebraic bridge and
-shows that exact algebraic enforcement can be the wrong architecture; the
-surface-code paper measures the capacity boundary when local stabilizer
-geometry is supplied by the code. This paper asks whether the same
-geometry-aware principle can supply the missing learned recovery layer for the
-X-cube fracton code.
+This work began with a classical communication question: if a receiver
+already has a useful model of a source, how much instance-specific evidence
+must a sender transmit? A syndrome can identify a set of compatible signals,
+while a shared prior ranks or samples plausible reconstructions within that
+set. The companion occupancy-grid work investigates this idea using learned
+spatial priors, with spectral and coarse side information in the reported
+experiments. Its objective is reconstruction quality under a bit budget.
 
-The resulting ladder is:
-\begin{enumerate}[leftmargin=1.6em,itemsep=2pt]
-  \item \textbf{Syndrome-based 3D storage.} Recover three-dimensional stored
-    data from local, overlapping parity checks plus a learned prior. Empirically,
-    \emph{constraint locality} is what makes this work: local overlapping checks
-    help, high-weight global projections hurt.
-  \item \textbf{The checks are a fracton theory.} The axial-parity codec's
-    codespace is a discrete-$\mathbb{Z}_2$ scalar-charge fracton gauge theory
-    with closed-form rank $3n^2-3n+1$ (see \S\ref{sec:bridge}); its parity checks
-    \emph{are} the fracton conservation laws. The classical storage scheme is the
-    classical shadow of fracton physics.
-  \item \textbf{Quantum code instances.} The surface code and the X-cube fracton
-    code~\cite{vijay2016} are quantum stabilizer instances in this constraint
-    family. Fracton
-    order is one proposed route toward \emph{passive} quantum memory: its
-    sub-dimensional excitations and conservation laws can obstruct error motion
-    in ways unavailable to 2D codes, at a subextensive but growing logical count
-    ($k = 6L-3$ on the 3-torus). Whether a given model actually yields
-    self-correction is a Hamiltonian/lifetime question, not settled here; this
-    complements the broader push toward hardware-efficient high-rate qLDPC
-    memories~\cite{wills2026concat}.
-  \item \textbf{The missing recovery layer (this paper).} Any active readout
-    layer for such a memory needs a recovery rule, and X-cube decoding lacks a
-    universally adopted surface-code-like standard
-    decoder~\cite{spencer2026tutorial,brown2019}. We supply a learned one and
-    show its logical error rate
-    \emph{improves} with system size (each $L$ is trained separately --- a
-    scaling property, not zero-shot cross-size transfer).
-\end{enumerate}
+Quantum error correction poses a related inference problem with a different
+target. A syndrome constrains the physical errors that may have occurred;
+the noise model supplies their prior probabilities. Successful recovery
+requires the correct logical class, rather than a plausible replacement
+for an unknown quantum state. This distinction is essential: classical
+perceptual plausibility is not a quantum recovery criterion.
 
-The through-line across all four levels is one principle: \emph{recovery is
-geometry-aware inference over a constraint system; a learned decoder wins when
-its architecture matches the error geometry.}
+Here we study that inference task for the X-cube code~\cite{vijay2016}.
+Its cube syndrome has a regular three-dimensional representation, while
+the logical labels in our chosen basis are associated with wrapping lines.
+We test a convolutional decoder that preserves this spatial organization
+through a line-aggregation readout. Existing code-specific decoders exploit
+the same code's planar constraints through matching~\cite{brown2019}; a
+single surface-code-style matching problem over pairs of defects does not
+directly represent the four-defect patterns of the channel studied here.
+The overlapping weight-12 cube checks also make this a useful setting in
+which to compare with a generic BP+OSD-0 baseline.
 
-Why X-cube decoding is hard for generic decoders is structural. The $X$-error
-syndrome of the X-cube code is the set of violated cube ($Z$) stabilizers; the
-excitations are immobile fractons created four at a time at the corners of error
-membranes. There is no one-dimensional error string connecting pairs of defects,
-so a single surface-code-style MWPM over defect pairs --- the workhorse of
-surface-code decoding --- does not directly apply. General qLDPC decoders such as BP+OSD can be run, but the dense,
-highly-overlapping twelve-qubit cube checks frustrate belief
-propagation~\cite{spencer2026tutorial}, and convergence collapses at moderate
-error rates (we observe BP convergence below $0.05$ at $L=6$, $p=0.05$). Unlike
-surface codes, X-cube decoding has no universally adopted MWPM-like standard:
-code-specific decoders exist (notably Brown--Williamson's reduction to
-two-dimensional matching~\cite{brown2019}), but generic BP+OSD struggles on the
-dense cube-check representation --- leaving structural headroom for a
-learned decoder rather than only a marginal edge.
+\paragraph{Contribution and scope.}
+We report three-seed finite-size measurements for code-capacity $X$ noise,
+using both whole-block failure and mean error over a fixed logical basis.
+The learned decoder improves on the implemented baselines at every tested
+operating point. Its block failure decreases from $L=4$ to $L=10$ at
+$p=0.03$ but increases over that range at $p=0.05$. Models are trained
+separately at each $(L,p)$; the results do not measure transfer between
+sizes or an asymptotic threshold. The head ablation is evidence about
+retaining position information, with stronger mechanism tests left open.
 
-\paragraph{Scope and honesty.}
-The self-correcting-memory payoff (level 3) is the \emph{motivation}; we do not
-claim to demonstrate a self-correcting memory here. The concrete, defensible
-contribution of this paper is level 4: a learned decoder for the X-cube code
-that (i) beats the trivial baseline, BP+OSD-0, and our BW-naive implementation
-at every tested operating point over three seeds with disjoint test splits, (ii) \emph{improves} per-sector
-with code size, and (iii) does so via a mechanism we isolate (non-local line
-structure). Level 2, the gauge bridge, is summarized in \S\ref{sec:bridge} as
-motivation for the program but is not used in the decoder benchmark.
+The companion gauge note characterizes the classical axial-parity
+codespace, and the surface-code paper studies neural decoding budgets.
+These motivate a shared question about useful inductive biases; neither
+the classical theorem nor a physical equivalence between these systems
+is required for the X-cube benchmark. Passive storage and self-correction
+remain separate questions about Hamiltonian dynamics and memory lifetime.
 
 \section{Background: the X-cube code and the decoding task}
 \label{sec:background}
@@ -169,33 +131,38 @@ error. Equivalently, an explicit recovery using an arbitrary $R(s)$ applies the
 logical correction with parity
 $\hat\ell_j \oplus \langle \mathrm{logical}_Z^{(j)}, R(s)\rangle$; if $R(s)$ is
 chosen with zero logical-$Z$ parities this offset vanishes. A per-sector logical
-error occurs precisely when the predicted parity is wrong. This is amortized
-maximum-likelihood coset decoding, the same target used by neural surface-code
-decoders.
+error occurs precisely when the predicted parity is wrong. This defines a logical-class decoder. The implemented loss is a sum
+of binary cross-entropies, and each output is thresholded separately.
+At the population optimum, these outputs estimate the marginal probabilities
+$P(\ell_j=1\mid s)$; their separate modes minimize expected per-sector
+error. They do not in general maximize the joint probability $P(\ell\mid s)$,
+which is the decision rule for minimizing block failure. We therefore
+report block failure separately and do not identify this training objective
+with exact joint maximum-likelihood coset decoding.
 
-\section{From classical compression to quantum memory: the gauge bridge}
+\section{Classical motivation and the algebraic connection}
 \label{sec:bridge}
-The link between the classical storage scheme (level 1) and the quantum code
-(level 3) is not an analogy but an identity at the level of the check algebra.
-The axial-parity codec's codespace equals
-$\mathrm{image}(\partial_x\partial_y\partial_z)$ over $\mathbb{F}_2$, with
-$\ker(\partial_x\partial_y\partial_z) = K_x + K_y + K_z$ and closed-form rank
-$3n^2 - 3n + 1$ (machine-verified in the accompanying code). This identifies
-the parity codec as a discrete-$\mathbb{Z}_2$ scalar-charge fracton gauge
-theory~\cite{pretko2017}: its line, plane, and global parity checks are exactly
-the fracton conservation laws (line charges, planar charges, total charge). The
-X-cube code is the adjacent $\mathbb{Z}_2$ stabilizer member of the same
-family~\cite{vijay2016}. So ``syndromes recover 3D data'' and ``a fracton code
-stores a logical qubit'' are two uses of the same constraint language. The
-shared object is not an identical operational decoder: in compression the task
-is reconstruction of a plausible constraint-consistent voxel field, while here
-it is logical-coset inference from a quantum syndrome. What transfers is the
-recovery paradigm: choose an architecture whose inductive bias matches the
-constraint geometry.
+The classical axial-parity result is
+$\ker H=\mathrm{image}(\partial_x\partial_y\partial_z)$ over
+$\mathbb{F}_2$ on a periodic $n^3$ voxel lattice, with
+$\mathrm{rank}(H)=3n^2-3n+1$. Writing
+$T=\partial_x\partial_y\partial_z$, a voxel residual can be parameterized
+as $T\phi$, with the redundancy $\phi\mapsto\phi+\kappa$ for
+$\kappa\in\ker T$. This is an exact statement about the classical
+constraint set and its parameterization.
+
+Subsystem constraints and redundant potentials also occur in fracton
+models~\cite{vijay2016,pretko2017}. The classical identity alone does not
+identify the codec with a particular quantum gauge theory or the X-cube
+phase: that would require a mapping of local degrees of freedom, operators,
+and physical constraints. No such identification is assumed here.
+What carries across the paper family is a statistical question: how should
+a decoder combine a prior with syndrome evidence while preserving the
+geometry relevant to its target?
 
 \section{Decoder and baselines}
 \label{sec:methods}
-\paragraph{\textsc{AxisLineonHead}.} The decoder is a weight-shared 3D
+\paragraph{AxisLineonHead.} The decoder is a weight-shared 3D
 residual CNN (default width $64$, depth $8$) over the $L^3$ cube-syndrome
 field, followed by a line-aggregation head: features are collapsed along
 each logical-line axis, passed through a 2D transverse convolution, and
@@ -206,34 +173,33 @@ schedule, and batch size $2048$ for $L\le 6$, reduced to $768$ at $L=8$ and
 $384$ at $L=10$ for memory.
 
 \paragraph{Baselines.} (i) \emph{Trivial}: predict the all-zero logical
-class (the maximum-likelihood guess in the absence of decoding), the
-relevant floor for this per-sector task. (ii) \emph{BP+OSD-0}: belief
+class (the per-sector majority prediction for the channel and logical basis
+used here), a reference for prediction without syndrome information. (ii) \emph{BP+OSD-0}: belief
 propagation with order-0 ordered-statistics post-processing on $H_Z$, a standard
 general-purpose qLDPC decoder~\cite{spencer2026tutorial}; we report its block
-failure and BP convergence fraction. (iii) \emph{BW-naive}: our naive-weight
-implementation of Brown--Williamson's X-cube matching framework, which exploits
+failure and BP convergence fraction. (iii) \emph{BW-naive}: our simplified, naive-weight
+implementation inspired by Brown--Williamson's X-cube matching framework, which exploits
 the rigid fracton structure to reduce decoding to two-dimensional matching
 problems~\cite{brown2019}. We implement the cube-defect (``planeon'') matching
 variant (per-plane MWPM $+$ cluster neutralization; $100\%$ syndrome-consistent,
 exact on isolated single-edge errors); BW's BP edge-reweighting that lifts its
 threshold $3.7\%\!\to\!4.3\%$ is a documented extension we do not implement, so
-we do not claim to benchmark the fully tuned Brown--Williamson decoder. This
-planeon matching is syndrome-consistent but does not optimize over the logical
-wrapping-line degeneracies that distinguish syndrome-equivalent corrections; as
-$L$ grows it produces many recoveries that fix the syndrome yet land in the
-wrong logical coset, which is why its per-sector LER can rise above the trivial
-floor even while its block failure stays at or below it (by $L=10$ both are
-saturated near $1$).
+we do not claim to benchmark the fully tuned Brown--Williamson decoder. Our implementation passes syndrome-consistency and isolated-single-error
+checks, but these do not establish fidelity to the published algorithm's
+logical performance. Its poor large-size behavior warrants an independent
+audit of periodic wrapping, cluster neutralization, and logical-class
+selection. Comparisons here concern the released BW-naive implementation;
+we do not attribute its failure rates to the published decoder.
 
-\paragraph{Signal-existence oracle (Gate-0).} As a locality control, we
+\paragraph{Finite-data local lookup control (Gate-0).} As a locality control, we
 evaluate a held-out local-pattern lookup over the syndrome in a
 \emph{radius-1} transverse neighborhood of each logical line. This empirical
-maximum-likelihood estimate on the finite training split measures the usable
-signal in that window; it is a control for the mechanism analysis, not a formal
+frequency estimator tests one finite-data use of that window; it is a control for the mechanism analysis, not a formal
 Bayes-optimal bound and not a bound over local decoders of arbitrary receptive
 field. We run this control through $L=6$; since the radius-1 advantage is already
-$\le 0.3\%$ there, we use it as mechanism evidence rather than re-running it for
-the $L=8,10$ rows.
+$\le 0.3\%$ there, we retain it as a limited control rather than re-running it for
+the $L=8,10$ rows. Failure of this lookup can also reflect sparse training
+coverage of patterns; it does not prove an absence of local information.
 
 \paragraph{Protocol.} Every cell is run over seeds $\{42,43,44\}$ with a
 disjoint test sampler seed offset from train and validation. We report
@@ -270,9 +236,9 @@ per seed for $L\le 6$ and $30{,}000$ per seed for $L\ge 8$; the much slower
 BP+OSD-0 baseline is evaluated on a subset ($2{,}000$ shots per seed through
 $L=8$, $300$ at $L=10$), with BW-naive run on dedicated CPU nodes and merged.
 BW-naive
-(\S\ref{sec:methods}) dominates the trivial floor on block failure but, ignoring
-the wrapping-line degeneracy, its per-sector LER rises above trivial at higher
-$p$/$L$ (by $L=8$, so does BP+OSD-0).}
+(\S\ref{sec:methods}) has lower block failure than the trivial baseline
+before saturation, but higher per-sector error in several cells; these
+metrics need not rank decoders identically.}
 \label{tab:main}
 \begin{tabular}{ll cccc c cccc}
 \toprule
@@ -305,16 +271,12 @@ $c{=}1794$; learned-vs-BP+OSD-0 $b{=}511$, $c{=}99$; learned-vs-BW-naive
 $b{=}12648$, $c{=}2499$). BP+OSD-0 itself beats
 trivial at small codes but degrades with size and noise; its BP
 convergence fraction falls from $\sim 0.8$ ($L=3,p=0.03$) to $\sim 0.03$
-($L=6$, $p=0.05$). Our BW-naive implementation is
-stronger than the trivial floor on block failure (BP+OSD-0 is lower still), yet the learned decoder beats it at every
-cell on \emph{both} metrics, and the margin \emph{widens} with code size: at
-$L=6,p=0.03$ the learned per-sector LER ($0.018$) is $13\times$ below BW-naive's
-($0.242$). The contrast is sharp --- the learned per-sector LER \emph{improves}
-with $L$ while BW-naive's \emph{worsens} (the wrapping-line degeneracy it
-ignores grows with the code), so BW-naive's per-sector LER even exceeds the trivial
-floor by $L=6$ despite still dominating trivial on block failure.
+($L=6$, $p=0.05$). The measured BW-naive gap widens with size; for example, at
+$L=6,p=0.03$ its per-sector error is $0.242$, compared with $0.018$ for
+the learned decoder. This is an implementation-level comparison, not a
+measurement of the published Brown--Williamson algorithm's performance.
 
-\paragraph{The advantage grows with code size.} The scaling appears on both
+\paragraph{Finite-size behavior depends on the metric and noise rate.} At $p=0.03$, improvement is observed on both
 metrics (Fig.~\ref{fig:scaling}). On the \emph{basis-invariant} block-failure rate (all $6L-3$ sectors
 correct at once), the learned decoder improves with size at $p=0.03$ from
 $0.343$ at $L=4$ to $0.118$ at $L=10$ (the $L=3$ value $0.306$ is the only
@@ -334,78 +296,69 @@ $72{,}574$ discordant shots the trivial decoder never once beat it. This
 persists at $L=10$, where the learned decoder is again the only one of the four
 below the trivial floor (per-sector $0.003$ vs.\ $0.336$ BW-naive, $0.427$
 BP+OSD-0, $0.231$ trivial) and again has $c=0$ across $79{,}351$ discordant shots.
-A decoder
-whose accuracy improves as the code grows is exhibiting the scaling behavior
-required of a useful decoder and that a fixed local lookup table cannot provide.
+At $p=0.05$, however, block failure increases from $0.626$ to $0.863$
+over $L=3$ through $L=10$, even though per-sector error improves from
+$L=4$ onward. Because the number of logical labels grows with $L$ and
+their errors can be correlated, per-sector improvement alone is
+insufficient to establish improved whole-block recovery.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.62\linewidth]{fig_scaling.pdf}
-\caption{Per-sector LER versus code size $L$ at $p=0.03$ (log scale, 3-seed
-means, seed-bootstrap $95\%$ CIs; data from Table~\ref{tab:main}). The learned
-decoder \emph{improves} monotonically with $L$ while the trivial floor, BP+OSD-0,
-and BW-naive all \emph{degrade} --- the monotone divergence is the paper's core
-claim. Figure emitted by \texttt{make\_scaling\_figure.py} directly from the
-\texttt{reproduce\_xcube\_results.py} output JSONs.}
+\includegraphics[width=\linewidth]{fig_scaling.pdf}
+\caption{Finite-size performance at $p=0.03$ (3-seed means and
+seed-bootstrap $95\%$ intervals; Table~\ref{tab:main}). Left: block failure,
+which improves for the learned decoder from $L=4$ onward. Right: mean
+per-sector error in the fixed logical basis, which improves at every
+tested size. Each size has a separately trained model. Both panels use
+the retained result JSONs without new experiments.}
+
 \label{fig:scaling}
 \end{figure}
 
-\paragraph{A threshold-crossing view.} Plotting the learned decoder's error
-against the physical rate $p$, one curve per $L$, exposes where the
-size-scaling reverses (Fig.~\ref{fig:threshold}). On the basis-invariant
-\emph{block-failure} metric the $L$-ordering inverts in a narrow band around
-$p^\star \approx 0.045$: for $p$ below it, larger $L$ gives \emph{lower} block
-failure (the sub-threshold, size-improving regime our $p=0.03$ results occupy),
-while for $p$ above it the ordering flips and larger $L$ is worse --- which is
-precisely why the $p=0.05$ block-failure rows in Table~\ref{tab:main} climb with
-$L$. This estimate is deliberately coarse: away from $L=4$ each curve is two
-operating points ($p\in\{0.03,0.05\}$) joined by linear interpolation, so
-$p^\star$ should be read as $\approx 0.04$--$0.05$ rather than a precisely
-resolved threshold, and it sits, reassuringly, near the tuned Brown--Williamson
-threshold ($\approx 4.3\%$~\cite{brown2019}) and below the optimal X-cube
-fracton-sector value ($\approx 7.5\%$~\cite{song2021}). The
-\emph{per-sector} metric, by contrast, shows no such crossing in this window:
-larger $L$ stays at or below smaller $L$ through $p=0.05$ and only loses its
-advantage near $p\approx 0.11$--$0.13$ (the $L=4$ sweep of
-\S\ref{sec:discussion}), consistent with the monotone $p=0.03$ improvement being
-a sub-threshold, basis-relative effect rather than a demonstrated code threshold.
+\paragraph{Noise dependence and the unresolved crossing.}
+Figure~\ref{fig:threshold} plots the measured dependence on $p$. For
+$L\ge4$, larger sizes have lower block failure at $p=0.03$ and higher
+block failure at $p=0.05$. This reversal motivates a denser noise sweep.
+Except at $L=4$, however, only those two physical error rates were
+measured. Lines between them are visual guides and do not establish a
+threshold location or an asymptotic finite-size scaling law. A comparison
+with the published Brown--Williamson or optimal-decoder thresholds
+requires a resolved sweep, matched error sectors, and compatible failure
+criteria~\cite{brown2019,song2021}. The $L=4$ high-noise sweep measures a
+single size's advantage over a baseline; its disappearance cannot locate
+a code threshold.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{fig_threshold.pdf}
-\caption{Learned-decoder LER versus physical error rate $p$, one curve per code
-size $L$ (3-seed means, seed-bootstrap $95\%$ CIs; same released JSONs as
-Table~\ref{tab:main} plus the $L=4$ high-$p$ sweep). \emph{Left}: block failure
-(basis-invariant); the $L$-curves cross in a band around $p^\star\approx0.045$
-(shaded), separating the sub-threshold regime (larger $L$ better) from the
-super-threshold regime (larger $L$ worse). \emph{Right}: per-sector LER (log
-scale, basis-relative); the curves do not cross in this window. Away from $L=4$
-each curve is a two-point linear interpolation between $p=0.03$ and $p=0.05$, so
-the crossing is a coarse estimate (see Discussion). Figure emitted by
-\texttt{make\_threshold\_figure.py} directly from the
-\texttt{reproduce\_xcube\_results.py} output JSONs.}
+\caption{Measured learned-decoder error versus physical error rate
+(3-seed means and seed-bootstrap $95\%$ intervals). Left: block failure.
+Right: mean per-sector error in the fixed logical basis. Points are
+measurements; dashed connectors are guides only. Except for $L=4$, each
+curve has just two points, $p=0.03$ and $p=0.05$. No threshold is estimated
+from their interpolation.}
+
 \label{fig:threshold}
 \end{figure}
 
-\paragraph{Mechanism: the win is non-local.}
-Two controls localize the source of the advantage.
-\emph{(i) Ablation} (Table~\ref{tab:ablation}): replacing the
-line-aggregation head with global average pooling collapses performance
-\emph{exactly} to the trivial baseline (block failure $0.7342$ vs.\ trivial
-$0.7342$), i.e.\ the global-pool decoder learns nothing useful; whereas both
-the line-aggregation head and a coordinate-convolution head recover the
-win ($0.303$ and $0.302$). The structure-preserving head, not raw capacity,
-is what carries the result.
-\emph{(ii) Signal-existence oracle}: the held-out radius-1 local-window
-lookup has per-sector advantage over trivial of
-$34.2\%$ at $L=3,p=0.03$, falling to $5.7\%$ at $L=4,p=0.03$, $0.1\%$ at
-$L=4,p=0.05$, and $\le 0.3\%$ for all $L=6$ cells. The radius-1 local
-signal has largely collapsed by $L=4$ and is negligible by $L=6$, yet the
-learned decoder wins decisively throughout --- so it is exploiting
-\emph{non-local} correlations (the lineon/planon line and membrane
-structure of the code) outside this radius-1 oracle family. This
-also explains why the head matters: line aggregation is exactly the
-inductive bias that surfaces this non-local structure.
+\paragraph{Ablations and limits of the mechanism evidence.}
+At $L=3$, $p=0.03$, seed 42, the global-pooling head has the same measured
+block failure as the all-zero baseline ($0.7342$), whereas the coordinate
+convolution and line-aggregation heads achieve $0.3022$ and $0.3026$
+(Table~\ref{tab:ablation}). These measurements support preserving spatial
+information in the readout. They do not show a unique advantage from line
+aggregation, nor separate all differences in capacity and optimization.
+Matched-capacity, multi-seed ablations at larger sizes are needed to test
+whether explicit line aggregation offers an additional benefit.
+
+The held-out radius-1 lookup has per-sector advantage over trivial of
+$34.2\%$ at $L=3,p=0.03$, falling to $5.7\%$ at $L=4,p=0.03$, $0.1\%$
+at $L=4,p=0.05$, and $\le0.3\%$ for all $L=6$ cells. The network
+outperforms this finite-data control. Since the lookup is neither a
+Bayes-optimal estimator nor an exhaustive family of local decoders, this
+does not prove that all useful information lies outside its window.
+The geometric mechanism remains a hypothesis supported by the architecture
+and these restricted comparisons.
 
 \begin{table}[t]
 \centering
@@ -441,9 +394,8 @@ fracton decoder~\cite{brown2019} (threshold $\approx 4.3\%$), and the optimal
 X-cube fracton-sector threshold under $X$-noise is
 $\approx 7.5\%$~\cite{song2021}. Neural-network quantum states have been applied
 to fracton \emph{ground states}~\cite{fracton-nqs2024} but not to decoding.
-To our knowledge no \emph{neural} decoder has been demonstrated for the X-cube
-fracton code; our contribution is scoped precisely as that --- both \emph{neural}
-and \emph{X-cube-specific}. We benchmark it against the BW-naive implementation
+Our contribution is an X-cube-specific neural decoder and its released
+finite-size benchmarks; we do not rely on a claim of priority. We benchmark it against the BW-naive implementation
 of Brown--Williamson's code-specific matching framework~\cite{brown2019} described
 in \S\ref{sec:methods}, alongside the trivial floor and BP+OSD-0. We distinguish it from the parallel line of work that
 decodes high-rate qLDPC codes by \emph{algebraic} means: Wills et
@@ -456,65 +408,58 @@ graphs and reports extrapolation across code distances; it is complementary to
 our X-cube-specific line-aggregation head rather than a prior fracton decoder.
 Comprehensive surveys of the decoder landscape~\cite{spencer2026tutorial} confirm
 that machine-learning decoders and fracton-adjacent topics are each individually
-mainstream; the novelty here is their not-previously-combined intersection. The
+mainstream; our study focuses on their intersection in a particular code and noise model. The
 self-correcting-memory motivation follows the fracton literature (Haah's
 code~\cite{haah2011} and the partial-self-correction line).
 
 \section{Discussion and limitations}
 \label{sec:discussion}
-The result establishes \emph{existence}: a learned recovery layer for the
-X-cube code whose per-sector accuracy \emph{scales} (improves) through $L=10$ and
-that beats the trivial floor, BP+OSD-0, and our BW-naive implementation in the
-tested regime, with a mechanistic explanation. This is a candidate
-active recovery layer for the broader self-correcting-memory program; it does
-not by itself constitute a
-self-correcting memory, which is a statement about Hamiltonian dynamics and
-lifetime, not about decoding a code-capacity channel. On the baseline side, we
-use BP+OSD-0 as a scalable general-purpose qLDPC decoder; tuned higher-order
-OSD may narrow the gap at substantially greater cost, so we do not claim that
-all BP+OSD variants are dominated --- only that a generic BP+OSD-0 decoder
-fails to capture the X-cube geometry in this regime. A common concern for
-learned decoders is that training cost scales unfavorably with code
-distance~\cite{spencer2026tutorial}. Our design speaks to the \emph{model-size}
-side of this directly --- the decoder is \emph{weight-shared}, so its parameter
-count is independent of $L$. We do not measure training time or sample
-complexity versus $L$ (each $L$ is trained separately), and so make no
-training-cost-scaling claim; what we establish is an \emph{accuracy}-scaling
-result --- decode accuracy \emph{improves} with code size
-($0.042\to0.035\to0.018\to0.008\to0.003$ at $p=0.03$ for $L=3,4,6,8,10$) rather
-than degrading.
+The retained measurements demonstrate a learned decoder with improving
+finite-size block recovery from $L=4$ through $L=10$ at $p=0.03$, together
+with monotone improvement in the fixed-basis per-sector metric from $L=3$.
+They also show the limit of that observation: block failure worsens with
+size at $p=0.05$. All experiments use perfect syndrome measurements and
+independent $X$ noise; noisy repeated measurements and other noise channels
+are outside the present scope.
 
-Two limitations bound the present scope. First, the win has a bounded operating
-range in $p$. A fine-grained $L=4$ sweep (3 seeds) shows the per-sector advantage
-over trivial decaying smoothly with noise: a clear win through $p=0.05$
-($0.110$ vs $0.172$), narrowing to $0.198$ vs $0.227$ at $p=0.07$ and $0.267$ vs
-$0.274$ at $p=0.09$, and closing to a tie by $p \approx 0.11$--$0.13$ --- so the
-useful range reaches the vicinity of the $\approx 7.5\%$ optimal
-threshold~\cite{song2021} (BP+OSD-0 is dominated throughout this range, per-sector
-LER $0.42$--$0.48$). The block-failure threshold of Fig.~\ref{fig:threshold}
-($p^\star\approx0.045$) is, correspondingly, only coarsely resolved: it rests on
-two operating points per $L$ for $L\ne4$. Sharpening it into a publication-grade
-threshold estimate requires retraining the learned decoder on a dense $p$ grid
-(e.g.\ $p\in[0.030,0.055]$ in steps of $0.005$) at every $L$ and locating the
-crossing with its finite-size scaling collapse; the released pipeline supports
-this directly (it is a wider \texttt{--ps} grid in
-\texttt{reproduce\_xcube\_results.py}), and we leave the dense sweep, together
-with an optimal-decoder reference curve, to future work. Second, the decoder is
-demonstrated on the X-cube code; transferring the line-aggregation inductive
-bias to other codes where matching also breaks down is the natural next step.
-We see a concrete, sequenced path: (i) the \emph{3D toric code} first --- it is
-genuinely three-dimensional and topological, so the line-aggregation head
-transfers most directly; then (ii) high-rate \emph{bivariate-bicycle} qLDPC
-codes, the frontier near-term high-rate
-target~\cite{spencer2026tutorial,wills2026concat} (e.g.\ the gross
-$[[144,12,12]]$ code), where the baseline to beat is a tuned Relay-BP
-decoder~\cite{wills2026concat} rather than vanilla BP+OSD, and where the head
-will likely need redesign toward the quasi-cyclic symmetry, since these codes
-are 2D and lack the lineon/planon structure the X-cube head exploits. Decoding
-such quasi-cyclic codes ``remains a challenge''~\cite{spencer2026tutorial},
-which is exactly why a structure-aware learned decoder is worth testing there.
-Closing these gaps, on top of the gauge bridge of \S\ref{sec:bridge}, is what
-would turn the arc of \S\ref{sec:intro} from a through-line into a program.
+\paragraph{Objective and resource budget.}
+Binary cross-entropy and validation selection optimize per-sector
+prediction, not the joint logical-class decision. Joint or structured
+logical prediction is a useful follow-up for block recovery. Weight
+sharing keeps the network parameter count independent of $L$, but models
+are trained separately at each $(L,p)$, and processing a larger lattice
+requires more computation. We do not measure training-time or sample
+complexity scaling and do not demonstrate zero-shot transfer.
+
+\paragraph{Baselines and statistics.}
+BP+OSD-0 is one general-purpose configuration; higher-order OSD and other
+tuned variants are not benchmarked. BW-naive is a simplified implementation
+whose logical performance has not been validated against the published
+algorithm. Its poor large-size behavior must be audited before using it
+to support claims about code-specific matching. Large paired test-set
+differences establish gaps between the implemented decoders on the sampled
+distribution, not between all methods in those families. Three training
+seeds provide limited information about training variability; the reported
+seed-bootstrap intervals should be read alongside individual-seed results
+and test-shot counts rather than as precise population coverage estimates.
+
+\paragraph{Next experiments.}
+A dense common $p$ grid across sizes would test the apparent reversal in
+block-failure ordering. A validated code-specific baseline and larger-size,
+matched-capacity head ablations would strengthen the performance and
+mechanism claims. The $L=4$ sweep already shows the per-sector advantage
+over trivial narrowing from $0.110$ versus $0.172$ at $p=0.05$ to $0.267$
+versus $0.274$ at $p=0.09$, and disappearing around $p=0.11$--$0.13$;
+these are single-size comparisons, not threshold estimates.
+Transfer to 3D toric or other quantum codes would test the broader
+architectural idea, but the appropriate readout and baseline depend on
+each code's logical operators and syndrome geometry.
+
+The classical motivation remains useful: a prior and a compact constraint
+description can support inference without specifying a unique microscopic
+answer. Here the acceptable ambiguity is precisely stabilizer equivalence.
+Recovering the correct logical class is the benchmark; constructing a
+passive or self-correcting memory would require additional physical results.
 
 \section*{Reproducibility}
 {\sloppy
@@ -630,3 +575,4 @@ $L$ & $p$ & [95\% CI] & [95\% CI] & & vs.\ trivial & vs.\ BP+OSD-0 & vs.\ BW-nai
 \end{thebibliography}
 
 \end{document}
+

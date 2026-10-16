@@ -2,6 +2,7 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage{amsmath,amssymb,amsfonts,bm}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -9,6 +10,7 @@
 \usepackage{url}
 \usepackage[margin=1in]{geometry}
 \usepackage{enumitem}
+\setlength{\emergencystretch}{2em}
 \usepackage{multirow}
 
 \title{Sizing and Capacity Boundaries of\\Spatial Convolutional Decoders\\for Surface-Code Quantum Error Correction}
@@ -17,7 +19,7 @@
   Galatheus\\
   \texttt{brian@galatheus.com}}
 
-\date{May 2026}
+\date{October 2026 revision}
 
 \begin{document}
 \maketitle
@@ -32,14 +34,15 @@ conditioned on the physical error rate, so one model covers a range of
 sub-threshold operating points. The purpose is not to claim
 state-of-the-art MWPM beating---hybrid and graph-based neural decoders
 already establish that---but to characterise, with full multi-seed
-coverage, \emph{how far a pure spatial decoder scales and where it stops}.
+coverage, \emph{how a pure spatial decoder performs under specified
+architecture and training budgets}.
 Across three seeds and a disjoint test split, the decoder beats
 minimum-weight perfect matching (MWPM) at distances $d=3,5,7$ (relative
 improvement $+11$ to $+26\%$ at physical error rate $p=0.003$), reaches a
 noisy boundary at $d=9$ at the selected knee (tied with MWPM, large
 seed-to-seed variance)---which a $5\times$-data follow-up resolves, beating MWPM
 by $+36$ to $+57\%$ (three seeds) and showing the $d=9$ boundary is
-under-resourcing rather than a fundamental limit---and is under-capacity at
+under-resourcing rather than a fundamental limit---and underperforms at
 $d=11$ (well below MWPM at the selected knee). We size the network per distance by an empirical
 $\textrm{width}\times\textrm{depth}$ knee, and compare the classic ResNet
 block against a Leela-Chess-Zero-style block (``LC0''): block design is
@@ -54,59 +57,52 @@ are emitted by a single strict reproduction script over seeds 42/43/44.
 % ====================================================================
 \section{Introduction}
 
-\paragraph{The decoder is the Hamiltonian.}
-A probabilistic prior is literally a Boltzmann distribution:
-$p(x) \propto \exp(-H(x))$. So any procedure that reconstructs a signal
-from partial or corrupted observations is an interface to an energy
-landscape $H$ whose ground state is the correct reconstruction. Classical
-decoders, neural decoders, generative compression codecs, and autonomous
-error-correcting hardware differ only in \emph{where} $H$ lives and
-\emph{how} it is evaluated. Minimum weight perfect matching
-(MWPM)~\cite{higgott2022pymatching,higgott2025sparse} chooses a fixed
-combinatorial $H$ read off the code's Tanner graph and finds its ground
-state by matching. A diffusion model~\cite{ho2020ddpm} learns the score
-$\nabla \log p = -\nabla H$ and samples by Langevin descent. A neural
-QEC decoder amortises $\arg\min_x H(x \mid \text{syndrome})$ into a
-single forward pass. Autonomous QEC engineers $H$ directly into the
-physical qubits so that dissipation drives the quantum state toward the
-codespace ground state, with no classical decoder pipeline at all.
-All four are interfaces to the same operation: evaluate or descend
-$\nabla H$ of an energy landscape. They differ only in whether $H$ is
-hand-designed, learned from data, realised as a score field, or baked
-into hardware.
+\paragraph{Recovery from syndrome evidence and a prior.}
+The classical question behind this paper family is whether a sender can
+transmit a compact syndrome while a receiver reconstructs using a shared
+source model. A syndrome restricts the compatible signals, and the prior
+determines which alternatives are plausible. The companion voxel study
+examines reconstruction quality with additional transmitted side information.
 
-This framing changes the interesting question. ``Can a neural decoder
-beat MWPM on circuit-level noise?'' was the question in 2023--2024, and
-the answer is now yes: AlphaQubit~\cite{bausch2024alphaqubit} on real
-Sycamore data, the graph neural network decoder of
-Lange et al.~\cite{lange2025gnn} on circuit-level depolarising noise in
-simulation, state-space decoders~\cite{lee2025mamba}, and hybrid
-classical--neural decoders such as NMWPM all clear the MWPM bar at the
-distances they were trained for. What these works do not address is the
-more fundamental question: \textbf{how much capacity does the learned
-$H$ need as a function of code distance, and does that requirement
-depend on the architecture of the network that represents $H$?} Prior
-work sizes models ad hoc -- Lange et al.\ use a $1.36$M-parameter
-network for $d \le 7$ and a $2.35$M-parameter network for
-$d=9$~\cite{lange2025gnn}; NMWPM uses a constant $3.9$M parameters
-across all distances. There is no principled prescription.
+Quantum error correction has a corresponding inference problem with a
+different success criterion. Let $e$ denote a physical error history,
+$s$ its detector record, and $\ell(e)$ the logical observable flip.
+The noise model gives $P(e)$, and optimal binary logical prediction uses
+\[
+ \hat\ell(s)=\arg\max_{b\in\{0,1\}}
+ \sum_{e:\,s(e)=s,\,\ell(e)=b} P(e).
+\]
+Thus logical probabilities sum over compatible physical errors. Predicting
+a likely individual error, producing a plausible classical reconstruction,
+and preserving an unknown quantum state are distinct objectives.
+Our neural decoder approximates the binary logical decision from detector
+data; it does not construct a physical Hamiltonian or an autonomous memory.
+
+Existing neural and hybrid decoders already improve on particular MWPM
+baselines~\cite{bausch2024alphaqubit,lange2025gnn,lee2025mamba,peled2026nmwpm}.
+Here we ask a narrower empirical question: how do network architecture,
+capacity, and training budget affect a direct 3D convolutional decoder
+as code distance increases? We characterize the configurations and
+resource budgets actually tested, rather than deriving an intrinsic
+capacity requirement for the code.
 
 \paragraph{Contribution.}
 We give an empirical, multi-seed characterisation of how a pure 3D
-convolutional surface-code decoder must be \emph{sized} as a function of
-code distance, and where the pure-spatial approach runs out. Concretely:
+convolutional surface-code decoder performs as a function of
+code distance under the tested resource budgets. Concretely:
 (i) a per-distance capacity knee in $\textrm{width}\times\textrm{depth}$,
 selected on validation by a predeclared rule and reported with three-seed
 ($42/43/44$) test-set error rates and 95\% confidence intervals; (ii) the
 resulting operating map---MWPM-beating at $d=3,5,7$, a high-variance
-boundary at $d=9$, and an under-capacity regime at $d=11$; and (iii) an
+boundary at $d=9$ under the original budget, improved by the larger-data
+follow-up, and a below-baseline regime at $d=11$; and (iii) an
 architecture comparison (the classic ResNet block~\cite{he2016resnet}
 versus an LC0-style pre-activation, dual-output squeeze-excite,
 FiLM-conditioned, ReZero block) showing that block design is
 distance-dependent, not second-order. We deliberately do \emph{not} fit a
-closed-form scaling law. The detector volume grows as $d^{3}$, which
-motivates why capacity must grow with distance, but the multi-seed data
-show a capacity \emph{boundary}---a regime where seed variance explodes and
+closed-form scaling law. With $d$ measurement rounds the detector volume grows as $d^{3}$,
+increasing the input size and computation at fixed network width, but the multi-seed data
+show a budget-dependent \emph{boundary}---a regime where seed variance grows and
 the pure-spatial decoder falls below MWPM---rather than a clean power law,
 and we report it as such.
 
@@ -124,18 +120,16 @@ generalise a fixed-size, translation-invariant model across distance;
 they do not study a capacity-versus-distance sizing rule, which is exactly
 the gap we fill. What the present work adds is therefore orthogonal to the
 logical-error-rate race: (i) an empirical, multi-seed capacity-sizing map
-for a pure spatial decoder as a function of code distance; (ii) an explicit
-characterisation of the distance at which the pure-spatial approach stops
-being competitive; and (iii) an architecture comparison testing whether
+for a pure spatial decoder as a function of code distance; (ii) a characterization of competitiveness at the tested budgets,
+including the $d=9$ improvement with additional training data; and (iii) an architecture comparison testing whether
 block design matters once capacity is sized---it does, and in a
 distance-dependent way.
 
 This paper is one member of a four-paper program on learned recovery over
 constraint systems. The companion occupancy-grid compression
-work~\cite{guarraci2026compression} isolates the constraint-locality principle:
-the parity-check structure must be engineered so that local learned proposals
-can use syndrome information without being damaged by high-weight algebraic
-projection. The gauge-structure note shows the complementary warning that an
+work~\cite{guarraci2026compression} motivates local, prior-aware
+refinement from comparisons of specific check-and-solver combinations.
+It does not establish a universal locality condition. The gauge-structure note shows the complementary warning that an
 exact algebraic characterisation of a codespace need not prescribe a useful
 architecture. Surface-code QEC provides the positive-control case for locality:
 the stabilizer geometry supplies local, overlapping checks by construction.
@@ -147,16 +141,13 @@ code distance grows?
 We are explicit about the scope so that reviewers can calibrate the
 contribution:
 \begin{itemize}[nosep]
-  \item \textbf{Not autonomous QEC.} All $H$ in this paper is learned
-        by a classical network from simulated data; none is engineered
-        into quantum hardware. The Hamiltonian framing points at
-        autonomous QEC as the natural endpoint of the programme, but
-        the present paper stays in the learned-decoder regime.
+  \item \textbf{Not autonomous QEC.} A classical network predicts logical
+        flips from simulated detector records. No physical relaxation or
+        autonomous recovery process is implemented.
   \item \textbf{Not a closed-form scaling law.} We report an empirical
         per-distance capacity knee and a boundary, not a fitted
-        $\alpha \cdot d^{3}$ law. The $d^{3}$ detector volume motivates why
-        capacity must grow with distance, but the data show a boundary, not
-        a power law; a first-principles capacity bound is a separate problem.
+        $\alpha \cdot d^{3}$ law. The $d^{3}$ detector volume describes input and compute growth;
+        it does not imply a lower bound on trainable parameter count; a first-principles capacity bound is a separate problem.
   \item \textbf{Not real hardware.} All syndromes are generated by
         Stim~\cite{gidney2021stim} under circuit-level depolarising
         noise. We do not test on biased noise, leakage, crosstalk, or
@@ -173,10 +164,10 @@ contribution:
 Section~\ref{sec:background} summarises the rotated
 surface code, detector events, and the MWPM baseline. Section~3
 describes the 3D convolutional decoder and the error-rate conditioning
-that lets one learned $H$ serve a continuous range of operating points.
+that lets each model cover the sampled range of operating points.
 Section~4 presents the per-distance capacity knees, the three-seed
 test-set results with confidence intervals, the resulting
-MWPM-beating / boundary / under-capacity operating map, and the
+MWPM-beating / variable / below-baseline operating map, and the
 classic-versus-LC0 comparison. Section~5 discusses follow-ups the results
 motivate: physics-informed priors that bake code geometry into the decoder
 before any data is seen, and the LC0 component ablation and paired
@@ -215,9 +206,10 @@ initial state.
 
 We use \textbf{PyMatching v2}~\cite{higgott2022pymatching,higgott2025sparse},
 the standard fast MWPM implementation, configured from Stim's detector
-error model with \texttt{decompose\_errors=True}. This is the standard
-QEC benchmark baseline used across the community
-\cite{google2023suppressing,google2024below,bausch2024alphaqubit,lee2025mamba}.
+error model with \texttt{decompose\_errors=True}. Comparisons refer to this specific detector-error-model-based
+configuration, not every matching variant or tuning. In particular,
+decomposing errors into graphlike components does not establish that all
+circuit-noise correlations are retained by the matching objective.
 
 % ====================================================================
 \section{Method}
@@ -257,12 +249,12 @@ architecture~\cite{he2016resnet} adapted to volumetric data:
 \end{itemize}
 The historical fixed-size prototype used $W = 128$ and $N = 12$
 (10.7M parameters). The active paper uses per-distance knee cells selected
-by the clean capacity scan, because fixed capacity is exactly the failure
-mode being studied.
+by the clean capacity scan. The follow-up data-budget experiment separates
+one source of performance limitation from parameter count alone.
 
 \subsection{Mixed error rate training}
 
-A novel feature of our training is that \textbf{a single model is
+For each distance and architecture, \textbf{a single model is
 trained on a uniform mixture of physical error rates}. For each training
 iteration, samples are drawn from circuits with
 $p \in \{0.001, 0.002, \ldots, 0.007\}$, and each sample is paired with
@@ -362,7 +354,7 @@ below MWPM at $d=11$ at the selected knee. The $d=9$ and $d=11$ rows are
 dominated by seed variance: the per-seed classic $d=9$ LERs are
 $\{0.00059,0.00045,0.00072\}$ (one seed beats MWPM, two do not), and the
 LC0 $d=9$ LERs are $\{0.00060,0.00049,0.00139\}$ with a $2$--$3\times$
-outlier. This is the signature of a capacity boundary, not a smooth
+outlier. This is the signature of a budget-dependent performance boundary, not a smooth
 power-law trend---which is why we report a boundary rather than fit a law.
 
 \paragraph{The $d=9$ boundary is under-resourcing, not a fundamental limit.}
@@ -506,12 +498,12 @@ theoretical $d^3$ because small distances do not saturate GPU compute.
 Single-shot latency is approximately constant at 2.3--3.0\,ms, dominated
 by GPU kernel launch overhead.
 
-\textbf{Path to real-time deployment.} Our prototype is approximately
-$180\times$ slower than the QEC cycle time at $d=5$. The convolutional
-architecture is well-suited to standard acceleration: TensorRT compilation
-(2--5$\times$), model distillation (10--100$\times$ at small $d$), INT8
-quantization (2--4$\times$), and FPGA/ASIC synthesis. A conservative
-$50\times$ improvement would reach ${\sim}10$\,$\mu$s at $d=5$.
+\textbf{Deployment scope.} These timings describe the fixed width-128,
+depth-12 prototype in Table~\ref{tab:latency}, not every selected
+configuration. Batched throughput and single-shot response latency are
+different deployment constraints. Accelerator compilation, distillation,
+quantization, and dedicated hardware are possible directions, but no
+combined speedup or real-time deployment is demonstrated here.
 
 \subsection{Comparison with prior work}
 
@@ -540,13 +532,18 @@ We are explicit about what we have and have not shown:
   \item The $d=9$ and $d=11$ results have large seed-to-seed variance
         (SEM an order of magnitude larger than at $d\le7$); the boundary
         is reported as such, and the $d=11$ knee is explicitly
-        under-capacity rather than a tuned best case.
-  \item The classic-versus-LC0 comparison is aggregate (unpaired): the two
-        blocks were trained on different shots, so the block-design effect
-        is reported at the level of mean LER, not a paired same-shot test.
+        a below-baseline result at the tested budget, rather than a tuned best case.
+  \item The classic-versus-LC0 comparison is aggregate (unpaired): no
+        paired per-shot comparison between the two trained models is
+        reported. Different training shots do not preclude evaluating
+        both on a common test set; that comparison remains a follow-up.
   \item The LC0 win at $d=7$ is not decomposed into its components
         (pre-activation, dual-output squeeze-excite, FiLM, ReZero); a
         component ablation is future work.
+  \item The larger capacity-scan directories used to select the retained
+        configurations are not included in the public release. The
+        released evaluation JSONs reproduce their reported performance,
+        but do not independently reproduce the full selection process.
   \item AlphaQubit's headline 25\% result is on real hardware (Sycamore
         data not publicly available); our simulation result is not
         directly comparable.
@@ -555,7 +552,7 @@ We are explicit about what we have and have not shown:
 % ====================================================================
 \section{Connection to Constraint Locality}
 
-Our companion compression paper isolates the constraint-locality principle in
+Our companion compression paper investigates constraint locality in
 a setting where the parity checks are a design choice rather than a physical
 given~\cite{guarraci2026compression}. In that domain, fixed high-weight
 projection can damage a strong learned proposal, while local overlapping
@@ -565,7 +562,10 @@ Surface-code decoding gives the corresponding positive-control case.
 Stabilizers have exactly the required structure \emph{by construction}: each
 stabilizer acts on at most four adjacent qubits (weight-4 in the bulk,
 weight-2 at the boundary), neighboring stabilizers share support on data
-qubits, and a single-qubit error flips at most two neighboring detectors. The
+qubits, and a single Pauli error at a fixed time has a local syndrome footprint.
+Circuit faults can generate correlated detector events, so this geometric
+observation does not reduce every circuit-level event to an independent
+pair. The
 compression problem must engineer locality; the surface code supplies it
 through its geometry.
 
@@ -580,21 +580,16 @@ exploit it as the detector volume grows with distance.
 % ====================================================================
 \section{Discussion and Future Work}
 
-\paragraph{What the boundary means, and what it does not.}
-It is tempting to read the per-distance knees as a closed-form law
-$w\cdot\text{depth}\approx\alpha\cdot d^{3}$, since the detector volume the
-network must process grows as $d^{3}$. We resist this reading. With three
-seeds at every distance, the data show a \emph{boundary}, not a power law:
-the knee is well defined and MWPM-beating through $d=7$, but at $d=9$ the
-decoder is statistically tied with MWPM with seed variance an order of
-magnitude larger than at smaller distances, and at $d=11$ the same
-$\textrm{width}\times\textrm{depth}$ budget that nearly suffices at $d=9$
-is far under capacity. A clean $\alpha$ would require the knee to track
-$d^{3}$ \emph{through} the boundary; instead the boundary is precisely
-where a fixed sizing heuristic breaks down. We therefore report an
-empirical operating map and a boundary location, and leave a
-first-principles capacity bound---ideally from information-theoretic limits
-given syndrome sparsity and the noise rate---as an open problem.
+\paragraph{The boundary depends on the training budget.}
+The original selected configurations beat the implemented MWPM baseline
+through $d=7$, are variable at $d=9$, and underperform at $d=11$.
+The $d=9$ follow-up uses the same classic architecture with five times
+the training data and achieves lower error than MWPM across its reported
+rates. The original boundary therefore is not a demonstrated limit of
+that architecture. At $d=11$, the existing experiments do not isolate
+parameter capacity, data budget, and optimization as causes of the gap.
+We report a budget-dependent operating map, not a scaling law or a
+lower bound on the capacity needed to decode.
 
 \paragraph{Block design is distance-dependent.}
 We had hypothesised that, once capacity is sized, the residual block design
@@ -608,17 +603,17 @@ dual-output squeeze-excite, FiLM conditioning, or ReZero) is the most
 immediate follow-up; it requires block variants that isolate each component
 and a paired same-shot test against the classic block.
 
-\paragraph{$d=11$ is under capacity, not an achieved match.}
-At the $d=11$ knee ($w{=}96,\text{depth}{=}12$) the three-seed classic test
-LER at $p=0.003$ is $0.00105$ versus MWPM's $0.00020$---roughly $5\times$
-worse, and worse still for LC0. We make no MWPM-match claim at $d=11$ with
-the capacities run; the $d=11$ rows are under-capacity data points that
-mark where the pure-spatial approach stops and where a larger-capacity or
-hybrid decoder would be required.
+\paragraph{$d=11$ remains below the baseline at the tested budget.}
+At the $d=11$ selected configuration ($w=96$, depth $12$), the
+three-seed classic LER at $p=0.003$ is $0.00105$, versus MWPM's
+$0.00020$, with LC0 performing worse. These observations warrant
+controlled capacity and data-budget sweeps; they do not establish an
+intrinsic stopping distance for a pure convolutional decoder.
 
 \paragraph{The most promising follow-up: a physics-informed decoder.}
-The boundary suggests the pure-spatial decoder spends much of its capacity
-re-learning structure the code geometry already specifies. A
+One hypothesis is that explicit code structure could reduce the data or
+capacity required by a pure-spatial decoder. The present experiments do
+not measure how much capacity is spent learning that structure. A
 physics-informed decoder parameterises $H(x) = H_{\text{code}}(x) +
 H_{\theta}(x)$, with $H_{\text{code}}$ fixed from the code (a
 differentiable form of the MWPM edge weights) and only the residual
@@ -628,9 +623,9 @@ al.~\cite{lange2025gnn} and especially NMWPM~\cite{peled2026nmwpm}, which
 learns MWPM edge weights and reports near distance-independent parameter
 efficiency. Because NMWPM already realises much of this idea, the novelty
 of a physics-informed variant must be argued against it directly rather
-than against MWPM. The sizing map here predicts where the boundary lies for
-the pure-spatial decoder, and thus where such a prior would buy the most;
-collapsing the $d\ge9$ boundary is the concrete target.
+than against MWPM. The operating map identifies configurations where a hybrid comparison
+would be informative. Such a comparison should include the larger-data
+classic decoder, since additional data already improves the $d=9$ result.
 
 \paragraph{Generative and score-matching decoders.}
 A score- or diffusion-style head that emits a per-cell gradient rather than
@@ -643,53 +638,36 @@ therefore flag it as relevant prior art rather than as our own
 contribution.
 
 \paragraph{Realistic noise and deployment.}
-Two practical gaps remain that are orthogonal to the Hamiltonian
-framing. First, all experiments here use circuit-level depolarising
-noise generated by Stim~\cite{gidney2021stim}. Biased noise, leakage,
-and crosstalk are the regimes in which MWPM's independent-error
-assumption is most strongly violated; prior neural decoders report
-their largest improvements there. We expect the same qualitative
-finding (the learned $H$ captures correlations MWPM cannot) but have
-not measured it. Second, the prototype is roughly two orders of
-magnitude too slow for real-time deployment at $d \ge 5$. The $O(d^{3})$
-cost and the pure-convolutional structure make the architecture
-suitable for standard accelerator paths (TensorRT, quantisation,
-FPGA/ASIC synthesis) and we project that a conservative combination
-reaches the syndrome cycle time at $d \le 7$. Both gaps are engineering
-projects rather than research questions; neither bears on the
-sizing-and-boundary result.
+All experiments use simulated circuit-level depolarizing noise.
+Performance under biased noise, leakage, crosstalk, and real-device
+distribution shift remains unmeasured. Inference latency also remains
+above the intended real-time regime. Quantization, accelerator compilation,
+and dedicated hardware are possible follow-ups, but their speedups and
+effects on logical error have not been demonstrated here. These are
+additional experimental questions, separate from the reported resource map.
 
-\paragraph{Takeaway.}
-A pure 3D convolutional decoder, sized per distance by an empirical knee,
-beats MWPM at $d=3,5,7$ on circuit-level depolarising noise, reaches a
-high-variance boundary at $d=9$, and is under capacity at $d=11$. Block
-design is not second-order: an LC0-style block extends the win at $d=7$ but
-does not rescue the boundary. The useful takeaways are practical---a
-sizing map for pure-spatial decoders and an honest boundary location---and
-they point to a hybrid, physics-informed decoder as the way past the
-boundary, with an LC0 component ablation and a paired block comparison as
-the immediate next experiments.
-
-% ====================================================================
 \section{Conclusion}
+We presented a three-seed study of direct 3D convolutional surface-code
+decoders under specified architecture and training budgets. In the
+original selected configurations, the decoder improves on the implemented
+MWPM baseline at $d=3,5,7$, is variable at $d=9$, and underperforms at
+$d=11$. A fivefold-data follow-up at $d=9$ improves on MWPM without
+changing the classic architecture, demonstrating that the original
+boundary is budget-dependent. The LC0-style block helps at $d=7$ in
+the retained comparison; its component contributions and paired
+performance against the classic block remain to be tested.
 
-We presented a multi-seed sizing-and-boundary study of direct 3D
-convolutional surface-code decoders. Sized per distance by an empirical
-capacity knee and evaluated on a disjoint test split across seeds
-$42/43/44$, the pure-spatial decoder beats MWPM at $d=3,5,7$, is
-statistically tied at the high-variance $d=9$ boundary, and is under
-capacity at $d=11$. The residual block design is distance-dependent rather
-than second-order: an LC0-style block clearly wins at $d=7$ but does not
-help at the boundary. We make no scaling-law or state-of-the-art claim; the
-contributions are an empirical capacity-sizing map for a pure spatial
-decoder, an honest boundary location, and the block-design finding, all
-emitted by a single strict reproduction script. The results point to a
-physics-informed hybrid decoder as the route past the boundary, with an LC0
-component ablation and a paired block comparison as the immediate next
-experiments. Code, trained models, and the reproduction pipeline are released
-with the paper family in the companion portfolio repository.
+The contribution is an empirical operating map, not a scaling law or
+a state-of-the-art decoding claim. It addresses the paper family's
+central inference question in a quantum setting: given syndrome evidence
+and a prior over errors, which learned representation and resource
+budget suffice to infer the relevant logical information? Source code
+and retained evaluation JSONs are released; re-evaluation of trained
+models requires the external checkpoints described in the reproduction
+guide.
 
 % ====================================================================
+
 \bibliographystyle{unsrt}
 
 \begin{thebibliography}{25}
@@ -817,3 +795,4 @@ companion paper, 2026.
 \end{thebibliography}
 
 \end{document}
+

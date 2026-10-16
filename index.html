@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Geometry-Aware Learned Syndrome Recovery</title>
-<meta name="description" content="A four-paper research program on learned recovery from syndrome constraints: classical binary syndrome source coding, 3D voxel compression, fracton gauge structure, and topological quantum error correction.">
+<meta name="description" content="A four-paper research program on reconstruction from compact syndrome evidence and shared priors, from classical voxel reconstruction to quantum logical recovery.">
 <link rel="icon" href="data:,">
 <script>
 window.MathJax = {
@@ -374,12 +374,12 @@ window.MathJax = {
 
 <div class="aside">
   <span class="label">The one idea to hold onto</span>
-  A syndrome rarely specifies a single answer &mdash; it defines a large coset of feasible solutions. Exact algebraic constraints define that feasible set, but they do <em>not</em> by themselves define the right decoder. Successful learned recovery needs an architecture whose inductive bias matches the <strong>geometry</strong> of the residual uncertainty.
+  How little evidence must a sender transmit when the receiver already has a useful source model? A syndrome identifies a set of compatible signals; a shared prior ranks or samples reconstructions within it. The classical experiments also transmit spectral and coarse side information. Quantum decoding asks a related question with a different target: recovering the correct logical class under a noise prior.
 </div>
 
 <div class="hero">
   <img src="papers/figures/fracton/fig_scaling.png" alt="X-cube scaling plot: the learned AxisLineonHead decoder per-sector logical error rate improves with code size at p = 0.03, while standard baselines do not show the same scaling trend.">
-  <p class="figcap">Headline result: a structure-aware learned decoder for the X-cube fracton code. Per-sector logical error rate improves from \(L=3\) through \(L=10\) at \(p=0.03\), where generic baselines do not show the same scaling trend.</p>
+  <p class="figcap">X-cube finite-size results at \(p=0.03\): per-sector error improves from \(L=3\) through \(L=10\), and whole-block failure improves from \(L=4\) onward. Each size has a separately trained model. At \(p=0.05\), whole-block failure instead worsens with size.</p>
 </div>
 
 <h2>Read the series</h2>
@@ -394,7 +394,7 @@ window.MathJax = {
   <div class="card">
     <span class="role">Headline result</span>
     <h3>1. Structure-Aware Neural Decoding for the X-Cube Fracton Code</h3>
-    <p>The X-cube code has subdimensional lineon structure. An <code>AxisLineonHead</code> aggregates evidence along the logical line geometry instead of flattening the problem into a generic 3D classifier &mdash; and scales favorably with code size where matching baselines struggle.</p>
+    <p>An <code>AxisLineonHead</code> aggregates evidence along the chosen logical-line geometry. The paper reports finite-size logical recovery against the implemented baselines. Larger-size head ablations and a validated code-specific matching comparison remain open.</p>
     <div class="links">
       <a href="papers/fracton.pdf"><span class="ico">📄</span> Paper (PDF)</a>
       <a class="primary" href="papers/tutorials/fracton.html"><span class="ico">📘</span> Tutorial</a>
@@ -418,7 +418,7 @@ window.MathJax = {
   <div class="card">
     <span class="role">Algebraic foundation</span>
     <h3>3. Gauge Structure and Architectural Inductive Bias</h3>
-    <p>The corrected axial-parity voxel codec has codespace \(\mathrm{image}(d_x d_y d_z)\) &mdash; a discrete \(\mathbb{Z}_2\) fracton gauge structure. But hard-coding that exact algebra into the architecture underperforms a more flexible multi-scale bottleneck prior.</p>
+    <p>The corrected axial-parity voxel codec has codespace \(\mathrm{image}(d_x d_y d_z)\), with an exact redundancy in its potential representation. The tested fixed-output architecture underperforms alternative priors on validation data. Equivalence to a physical fracton gauge theory is not established.</p>
     <div class="links">
       <a href="papers/gauge.pdf"><span class="ico">📄</span> Paper (PDF)</a>
       <a class="primary" href="papers/tutorials/gauge.html"><span class="ico">📘</span> Tutorial</a>
@@ -430,7 +430,7 @@ window.MathJax = {
   <div class="card">
     <span class="role">Classical diagnostic</span>
     <h3>4. Constraint Locality in Learned Syndrome Decoding</h3>
-    <p>In 3D voxel compression, the useful constraints are local, overlapping, and content-aware. Targeted belief propagation and local surface checks refine a strong learned proposal, while hard high-weight global parity projections can erase the spatial information the model relies on.</p>
+    <p>Local surface checks and belief propagation improve the tested voxel proposals with additional syndrome bits, while a fixed right-inverse projection degrades them. Matched-rate and matched-solver comparisons are needed to isolate the effect of locality.</p>
     <div class="links">
       <a href="papers/compression.pdf"><span class="ico">📄</span> Paper (PDF)</a>
       <a class="primary" href="papers/tutorials/compression.html"><span class="ico">📘</span> Tutorial</a>
@@ -443,10 +443,10 @@ window.MathJax = {
 
 <h2>The shared thesis</h2>
 <blockquote>
-  Exact algebraic constraints define the feasible set, but they do not by themselves define the right decoder. Successful learned recovery requires an architecture whose inductive bias matches the geometry of the residual uncertainty.
+  A syndrome defines compatible possibilities, and a prior supplies a preference among them. How do the constraint geometry and the decoder's architecture affect the accuracy and cost of that inference?
 </blockquote>
 <p>
-  Read conceptually, the sequence runs: gauge theorem &rarr; constraint locality &rarr; surface-code capacity &rarr; X-cube fracton decoding &mdash; from algebraic structure, to the classical learned-recovery design rule, to ordinary topological QEC, and finally to the nonlocal/subdimensional fracton case.
+  Follow the original question through classical reconstruction &rarr; axial codespace structure &rarr; surface-code resource budgets &rarr; X-cube logical decoding. Each paper studies a distinct part of inference from syndrome evidence and a prior.
 </p>
 
 <h2>Reproduce the artifacts</h2>
@@ -482,3 +482,4 @@ python3 reproduce_results.py --baselines-only --n-samples 1 --out /tmp/voxel_rep
 </div>
 </body>
 </html>
+

@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 """Emit fig_threshold.png: learned-decoder LER vs physical error rate p, one
-curve per code size L -- the classic threshold-crossing view.
+curve per code size L. The historical filename is retained for compatibility.
 
 Reads ONLY the checked-in reproduce_xcube_results.py output JSONs (recomputes
 nothing). Left panel: block failure (basis-invariant). Right panel: per-sector
-LER (basis-relative). A threshold appears as the point where the L-ordering
-inverts: below it, larger L => lower error (sub-threshold); above it, larger L
-=> higher error (super-threshold).
+LER (basis-relative). Points are measurements; dashed connectors are guides.
 
 NOTE ON RESOLUTION: the learned decoder is only available at p in {0.03, 0.05}
 for every L (plus a fine sweep at L=4). So for L != 4 each curve is two points;
-the crossing estimate is a 2-point linear interpolation, not a dense scan. A
-publication-grade threshold plot needs the learned decoder retrained on a fine p
-grid at each L (GPU). This figure shows what the released data already implies.
+these points cannot resolve a threshold. Establishing a threshold requires
+a dense common p grid and a finite-size analysis. No crossing band is drawn.
 """
 import json
 import matplotlib
@@ -45,21 +42,6 @@ def series(L, metric):
     return ps, [cells[p][0] for p in ps], [cells[p][1] for p in ps], [cells[p][2] for p in ps]
 
 
-def crossing(La, Lb, metric):
-    """Linear-interp crossing p between curves La,Lb on the [0.03,0.05] segment."""
-    pa, ya, *_ = series(La, metric)
-    pb, yb, *_ = series(Lb, metric)
-    a0, a1 = ya[pa.index(0.03)], ya[pa.index(0.05)]
-    b0, b1 = yb[pb.index(0.03)], yb[pb.index(0.05)]
-    denom = (a1 - a0) - (b1 - b0)
-    if denom == 0:
-        return None
-    t = (b0 - a0) / denom
-    if 0 <= t <= 1:
-        return 0.03 + t * 0.02
-    return None
-
-
 fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.2))
 panels = [("block_failure", "Block failure (basis-invariant)", axes[0]),
           ("per_sector_ler", "Per-sector LER (basis-relative)", axes[1])]
@@ -68,18 +50,8 @@ for metric, title, ax in panels:
     for L in LS:
         ps, ys, lo, hi = series(L, metric)
         ax.errorbar(ps, ys, yerr=[lo, hi], label=f"$L={L}$", color=COLORS[L],
-                    marker=MARK[L], linestyle="-", linewidth=1.8, markersize=6,
+                    marker=MARK[L], linestyle="--", linewidth=1.3, markersize=6,
                     capsize=2.5, zorder=3)
-    # crossing band (use L=4 vs L=10, the cleanest extremes; L=3 has small-code effects)
-    xs = [crossing(a, 10, metric) for a in (4, 6, 8)]
-    xs = [x for x in xs if x is not None]
-    if xs:
-        ax.axvspan(min(xs), max(xs), color="0.85", alpha=0.6, zorder=0)
-        pc = sum(xs) / len(xs)
-        ax.axvline(pc, color="0.4", linestyle=":", linewidth=1.2, zorder=1)
-        ax.annotate(f"crossing\n$p^*\\approx{pc:.3f}$", xy=(pc, 0.5),
-                    xytext=(pc + 0.012, 0.42), fontsize=8.5, color="0.25",
-                    xycoords=("data", "axes fraction"))
     ax.set_xlabel("Physical error rate $p$")
     ax.set_ylabel(title)
     ax.set_xlim(0.025, 0.135)
@@ -87,14 +59,12 @@ for metric, title, ax in panels:
     ax.legend(frameon=False, fontsize=8.5, loc="lower right", ncol=2)
 
 axes[1].set_yscale("log")
-fig.suptitle("Learned X-cube decoder: LER vs $p$ (threshold-crossing view, 3-seed means, 95% CI)",
+fig.suptitle("X-cube noise dependence: measured points, dashed guides (three seeds)",
              fontsize=11)
 fig.tight_layout(rect=[0, 0, 1, 0.96])
 fig.savefig("fig_threshold.png", dpi=140, bbox_inches="tight")
 fig.savefig("fig_threshold.pdf", bbox_inches="tight")
 print("wrote fig_threshold.png / .pdf")
 
-for metric, title, _ in panels:
-    xs = [crossing(a, 10, metric) for a in (4, 6, 8)]
-    xs = [x for x in xs if x is not None]
-    print(f"  {title:36s} crossings (Lx vs L10) = {[round(x,4) for x in xs] if xs else 'none in [0.03,0.05]'}")
+print("No threshold estimate: all sizes except L=4 have only two noise points.")
+

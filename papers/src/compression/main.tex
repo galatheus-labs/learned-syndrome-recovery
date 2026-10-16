@@ -2,6 +2,7 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage{amsmath,amssymb,amsfonts,amsthm,bm}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -10,6 +11,7 @@
 \usepackage{url}
 \usepackage[margin=1in]{geometry}
 \usepackage{enumitem}
+\setlength{\emergencystretch}{2em}
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{corollary}[theorem]{Corollary}
@@ -20,14 +22,15 @@
   Galatheus\\
   \texttt{brian@galatheus.com}}
 
-\date{May 2026}
+\date{October 2026 revision}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-We study learned reconstruction for underdetermined binary syndrome systems
-arising from $32^3$ occupancy grids. A syndrome
+We ask how a receiver with a learned source prior can reconstruct a
+signal from a compact syndrome. We study this question in underdetermined
+binary syndrome systems arising from $32^3$ occupancy grids. A syndrome
 $\mathbf{H}\mathbf{x}=\mathbf{s}\pmod 2$ specifies an exponentially large
 coset, so reconstruction depends on a data-dependent learned proposal
 conditioned on coarse occupancy, low-frequency spectral side information,
@@ -35,18 +38,34 @@ and syndrome-derived features. The central question is not whether a
 syndrome can uniquely reconstruct a grid, but which constraint structures
 help a learned proposal refine its prediction.
 
-The main empirical finding is a constraint-locality effect. Hard algebraic
+The reported experiments transmit coarse and spectral side information
+as well as syndrome bits; they do not demonstrate syndrome-only recovery.
+The main empirical finding concerns the interaction of constraint design
+and the refinement algorithm. Hard algebraic
 projection with fixed high-weight checks can degrade a plausible learned
 prediction, while belief propagation on local overlapping surface checks can
 improve it. We frame the result as a design rule for learned syndrome-based
 occupancy coding: constraints should be local, overlapping, and targeted to
 uncertain regions of the proposal. We do not claim a complete production codec
-or state-of-the-art compression system; the contribution is the experimental
-isolation of when algebraic constraints help or hurt learned reconstruction.
+or state-of-the-art compression system; the contribution is evidence about when the tested constraint-and-decoder
+combinations help or hurt learned reconstruction. Matching the additional
+bit budget and refinement algorithm remains necessary to isolate locality
+as a causal explanation.
 \end{abstract}
 
 % ====================================================================
 \section{Introduction}
+
+The original motivation is to transmit a compact description of what
+distinguishes one source instance while relying on a model already available
+at the receiver for what is typical of the source. A syndrome acts as an
+index into a set of compatible signals: the receiver combines that index
+with its learned prior to reconstruct something appropriate to the source
+distribution. The shared model is assumed available before transmission;
+it supplies statistical knowledge, not the missing instance-specific bits.
+Exact recovery of the original, low-distortion reconstruction, and a
+plausible conditional sample are different objectives. This paper evaluates
+voxel reconstruction distortion.
 
 Binary syndrome decoding---recovering $\mathbf{x} \in \{0,1\}^N$ from
 $\mathbf{s} = \mathbf{H}\mathbf{x} \bmod 2$ given a parity check
@@ -96,7 +115,7 @@ Our contributions:
     occupancy grids (Section~\ref{sec:diagnosis}).
   \item \textbf{A constraint locality principle}: we compare hard
     algebraic projection against BP refinement with local overlapping
-    surface checks and identify the structural conditions under which
+    surface checks and identify candidate structural conditions under which
     syndrome information improves the proposal (Section~\ref{sec:locality}).
     We support the observation with a simple check-weight analysis
     (Theorems~\ref{thm:utility}--\ref{thm:expected}).
@@ -121,12 +140,38 @@ structure (a $d^3$ voxel grid, $N = d^3$). The encoder computes:
   \item Spectral side-information $\mathbf{c}$ (e.g., low-frequency
     transform coefficients of $\mathbf{x}$).
 \end{itemize}
-The decoder observes $(\mathbf{s}, \mathbf{c})$ and must recover
-$\mathbf{x}$.
+The decoder observes $(\mathbf{s},\mathbf{c})$ and produces an
+estimate of $\mathbf{x}$, evaluated by voxel intersection-over-union.
+Here $\mathbf{c}$ denotes the transmitted non-syndrome information,
+including the coarse occupancy information used by the implementation.
+
+\paragraph{A prior restricted by evidence.}
+An ideal probabilistic description is
+\[
+ q_\theta(\mathbf{x}\mid\mathbf{s},\mathbf{c})=
+ \frac{p_\theta(\mathbf{x}\mid\mathbf{c})
+ \mathbf{1}\{\mathbf{H}\mathbf{x}=\mathbf{s}\}}
+ {\sum_{\mathbf{u}}p_\theta(\mathbf{u}\mid\mathbf{c})
+ \mathbf{1}\{\mathbf{H}\mathbf{u}=\mathbf{s}\}},
+\]
+when the denominator is nonzero. A syndrome-only version omits
+$\mathbf{c}$. A decoder could seek a high-probability compatible signal,
+sample this distribution, or minimize expected distortion; these are
+different decision rules. This equation describes the motivating inference
+problem, not a claim that the implemented network computes or samples this
+posterior exactly. The experiments below use a discriminative learned
+proposal and explicit refinement operations.
+
+For a lossy reconstruction, plausibility under the prior can be useful
+even when exact identity is not recovered. Lossless transmission instead
+requires sufficient evidence to disambiguate the source under the relevant
+source model. A shared prior cannot guarantee identification of every
+member of a non-singleton syndrome class.
 
 With the corrected fixed constraint set, $M = 2{,}977$ and
-$N = 32{,}768$; the syndrome eliminates only $2{,}977$ bits of
-entropy, leaving $2^{29{,}791}$ valid solutions.
+$N = 32{,}768$; each feasible syndrome leaves $2^{29{,}791}$ algebraically valid
+solutions. Its information about the source is at most $2{,}977$ bits;
+the exact entropy reduction depends on the source distribution.
 The spectral coefficients provide a soft spatial proposal
 $P_\theta(x_i = 1 | \mathbf{c},\mathbf{s})$ through the learned decoder, but
 the decoder's fidelity is bandwidth-dependent: the post-projection L2 result
@@ -161,8 +206,8 @@ propagation on the Tanner graph~\cite{tanner,kfl2001} of $\mathbf{H}$ with the
 proposal's confidence as variable beliefs and $\mathbf{s}$ as check values.
 
 We show that (A) fails in this setting, (B) is strong,
-and (C) is better than (B) \emph{only when $\mathbf{H}$ has the right
-structure}.
+and the tested local-check variants of (C) improve on (B), with
+additional transmitted syndrome information.
 
 % ====================================================================
 \section{Diagnosis: Why Hard Algebraic Projection Fails}
@@ -197,12 +242,13 @@ Fraction of helpful flips & $\mathbf{5.3\% \pm 0.5\%}$ \\
 \end{table}
 
 The projection flips only 52.5 bits on average (0.16\% of the grid), but
-94.7\% of those flips move \emph{away} from the ground truth. The right
-inverse finds the minimum-Hamming-weight correction to satisfy the
-syndrome, but this algebraically minimal correction has no relationship
-to the spatially correct one. The projection operates at the scale of
-full rows (32 voxels), while errors are localized at object surfaces
-(2--8 voxels). This scale mismatch is the root cause.
+94.7\% of those flips move \emph{away} from the ground truth. The fixed right
+inverse selects one syndrome-consistent correction. It does not generally
+minimize Hamming weight and does not optimize the learned prior or spatial
+distortion. Its poor performance therefore diagnoses this correction rule
+in combination with these checks. The mismatch between long checks and
+surface-localized errors is a possible contributor, but the comparison
+does not isolate check scale from the correction algorithm.
 
 % ====================================================================
 \section{The Constraint Locality Principle}
@@ -320,9 +366,10 @@ All three successful BP variants share three properties:
     (object boundaries), not uniformly over the grid.
 \end{enumerate}
 
-Hard projection fails because it operates at the wrong spatial scale
-(full rows of 32 voxels) and uses minimum Hamming weight rather than
-spatial coherence as its correction objective.
+The measured hard-projection failure concerns a fixed linear
+right-inverse correction using high-weight checks. This rule ignores the
+learned confidence when choosing among syndrome-consistent corrections;
+it is neither a minimum-Hamming-weight nor a minimum-distortion decoder.
 
 % ====================================================================
 \section{Why Constraint Weight Controls Local Informativeness}
@@ -345,7 +392,8 @@ contains exactly one error is
 In this single-error regime, the check residual determines the correction
 value once the erroneous symbol is identified by the prior or by overlapping
 checks.
-This function is maximized at $w^* = -1/\!\ln p$ and satisfies
+Its continuous relaxation is maximized at $w^* = -1/\!\ln p$
+(an integer optimum is among the adjacent integers) and satisfies
 \begin{equation}
   P_1(w,\,p) \;\leq\; w \exp\!\bigl(-(w-1)\ln(1/p)\bigr),
 \end{equation}
@@ -362,10 +410,10 @@ follows from $p^{w-1} = \exp((w{-}1)\ln p)$.
 \end{proof}
 
 \smallskip\noindent\textbf{Example.} For a prior with
-$p = 0.88$: $w^* \approx 8$, $P_1(4) = 0.33$, $P_1(64) = 5 \times
-10^{-4}$. With $m = 32$ checks, local checks ($w{=}4$) yield
-${\sim}10.6$ single-error-informative checks; global checks ($w{=}64$) yield
-${\sim}0.016$.
+$p = 0.88$: $w^* \approx 8$, $P_1(4) \approx 0.327$,
+$P_1(64) \approx 2.44 \times 10^{-3}$. With $m = 32$ checks,
+local checks ($w{=}4$) yield ${\sim}10.5$ expected single-error checks;
+global checks ($w{=}64$) yield ${\sim}0.078$.
 
 \begin{theorem}[Expected utility of residual-only correction]\label{thm:expected}
 Consider a weight-$w$ check over $\mathrm{GF}(2)$ on a codeword
@@ -396,8 +444,15 @@ correction position lies on an error symbol with probability $k/w$
 symbol with probability $(w-k)/w$ (the flip introduces a new error:
 $\Delta\mathrm{err} = +1$). The conditional expectation is therefore
 $(w-2k)/w$. Averaging against the distribution on $k$ given $r \neq 0$
-yields~\eqref{eq:expected}. As $p \to 1$, the conditional mass
-concentrates at $k=1$, where $(w-2)/w > 0$ for $w \geq 3$.
+yields~\eqref{eq:expected}. To establish the sign throughout
+$p\in(1/2,1)$, set $a=2p-1\in(0,1)$. The binomial generating
+function gives $Z=(1-a^w)/2$ and
+\[
+ \mathbb{E}[\Delta\mathrm{err}\mid r\ne0]
+ =\frac{a(1-a^{w-2})}{1-a^w}>0\qquad(w\ge3).
+\]
+As $p\to1$, the conditional mass concentrates at $k=1$, yielding
+the stated leading term.
 \end{proof}
 
 \begin{corollary}[A prior is necessary]\label{cor:prior}
@@ -407,15 +462,17 @@ $w \geq 3$ and $p > 1/2$.
 \end{corollary}
 
 \begin{proof}
-The residual is invariant under permutations of the support, so any
-policy depending only on the residual is symmetric across positions
-and equivalent in expectation to the uniform-residual policy.
+Under the independent, identically distributed error model, the
+conditional error probability is identical at every position given the
+residual. Any choice of a single position that has no further error
+information, including a fixed asymmetric choice, therefore has the same
+expected correction utility as the uniform policy.
 Theorem~\ref{thm:expected} then applies.
 \end{proof}
 
 \begin{corollary}[Why high-weight checks are low-utility]\label{cor:global}
 For an independent prior with per-symbol accuracy $p$, the probability
-that a check is in the unambiguous single-error regime is
+that a check is in the single-error regime is
 $P_1(w,p) = w(1-p)p^{w-1}$. This probability decays exponentially once
 $w \gg -1/\ln p$. High-weight checks therefore spend most of their
 violations in a regime where the residual alone cannot identify the
@@ -430,10 +487,9 @@ multi-error cancellations can sometimes reduce the error count. The
 probabilistic version gives the right operational content: without an
 external information source --- the learned proposal, or overlapping
 local checks --- the residual alone cannot lower the expected error
-count for $w \geq 3$ in the high-prior-accuracy regime ($p \to 1$). The
-same conclusion holds qualitatively over $\mathrm{GF}(q)$ with $q > 2$
-for the analogous policy that pairs a uniform position choice with the
-unique residual-cancelling correction at that position. The practical
+count for $w \geq 3$ in the high-prior-accuracy regime ($p \to 1$). The sign result above is restricted to the stated binary, independent
+error model and one-position correction policy; it is not an impossibility
+theorem for decoding several checks jointly. The practical
 point is that large checks are rarely locally informative, while small
 overlapping checks create many single-error or near-single-error
 neighborhoods where the learned proposal and the syndrome can
@@ -489,12 +545,12 @@ randomness and is identical across the three reproduce jobs.
 \section{Discussion}
 
 \textbf{When do constraints help?}
-Our experiments show that syndrome constraints improve a learned
-proposal only in a narrow regime: the successful variants all use
+Among the tested refinement configurations, improvements occur with
+local surface constraints: the successful variants all use
 local checks (few variables), overlapping structure (shared variables
 between adjacent checks), and surface targeting (placed where the
 proposal is uncertain). Hard algebraic projection with global checks
-actively degrades quality. This constrains the design space for
+actively degrades quality. This motivates local, prior-aware refinement as a design candidate for
 syndrome-based spatial coding.
 
 \textbf{The learned proposal does most of the work.}
@@ -507,7 +563,13 @@ evaluated jointly with proposal quality: strong learned proposals are the
 prerequisite, and local constraints provide targeted refinements.
 
 \textbf{Limitations.}
-We tested voxel compression at $32^3$ resolution only. The current
+We tested voxel reconstruction at $32^3$ resolution on a validation
+subset used during development, rather than a new held-out test set.
+The global-projection and local-BP comparisons change the solver and
+constraint geometry, and local refinement transmits additional syndrome
+values. A matched-bit-budget comparison with matched inference methods
+is needed to isolate the effect of locality. The shared learned model's
+distribution shift and any model distribution cost are not evaluated. The current
 experiments isolate reconstruction behavior but do not yet constitute a
 complete entropy-coded production codec. Rate claims must include all
 transmitted payloads: fixed syndrome bits, surface-refinement syndromes,
@@ -524,11 +586,15 @@ Draco~\cite{draco}) remain future work.
 We studied underdetermined syndrome decoding for 3D occupancy grids with
 learned spatial proposals. The main result is not that fixed parity checks
 solve compression by themselves; the learned proposal does most of the
-reconstruction work. Syndrome constraints help only when they are local,
-overlapping, and targeted at uncertain regions of the proposal. This
-constraint-locality principle gives a concrete design rule for future
-learned syndrome-based occupancy codecs and a clear failure mode for hard
-algebraic projection with high-weight checks.
+reconstruction work. The tested local, overlapping, surface-targeted checks improve
+reconstruction with additional syndrome bits, while the fixed right-inverse
+projection degrades it. This supports a design hypothesis about local,
+prior-aware refinement, subject to matched-rate and solver controls.
+It also clarifies the original communication idea: the syndrome restricts
+the possible reconstructions, while the learned prior supplies the
+statistical preference among them. The reported side-information-assisted
+results are a step toward evaluating that idea, not a demonstration of
+syndrome-only or lossless recovery.
 
 Code and exact reproduction commands are released with the paper family in the
 companion portfolio repository.
@@ -646,3 +712,4 @@ D.~Slepian and J.~K.~Wolf.
 \end{thebibliography}
 
 \end{document}
+
